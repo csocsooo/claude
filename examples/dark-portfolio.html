@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lukáš Vondra — Independent Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #05060a;
+    color: #f5f5f7;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Cursor follower */
+  .cursor {
+    position: fixed; top: 0; left: 0; width: 12px; height: 12px;
+    border-radius: 50%; background: #c4f542; pointer-events: none;
+    transform: translate(-50%, -50%); z-index: 9999;
+    transition: width 200ms ease, height 200ms ease, background 200ms ease;
+    mix-blend-mode: difference;
+  }
+  .cursor.hover { width: 48px; height: 48px; background: #fff; }
+
+  /* Cursor glow that follows the pointer */
+  .glow {
+    position: fixed; top: 50%; left: 50%; width: 60vmax; height: 60vmax;
+    background: radial-gradient(closest-side, rgba(80, 30, 180, 0.4), transparent 70%);
+    transform: translate(-50%, -50%); pointer-events: none; z-index: 0;
+    transition: top 250ms ease-out, left 250ms ease-out;
+    filter: blur(40px);
+  }
+
+  header {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 24px 32px; z-index: 50;
+    text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px;
+    color: #8a8a94;
+  }
+  header .mark {
+    color: #f5f5f7; font-weight: 500;
+    display: flex; align-items: center; gap: 10px;
+  }
+  header .mark::before {
+    content: ''; display: block; width: 8px; height: 8px;
+    background: #c4f542; border-radius: 50%;
+    box-shadow: 0 0 12px #c4f542;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  header .meta { display: flex; gap: 24px; }
+
+  .hero {
+    position: relative; z-index: 10;
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    min-height: 100vh;
+    padding: 120px 32px 80px;
+    gap: 32px;
+  }
+
+  h1 {
+    font-family: 'Instrument Serif', 'Times New Roman', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(72px, 11vw, 200px);
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    color: #f5f5f7;
+    align-self: center;
+  }
+  h1 .line { display: block; overflow: hidden; }
+  h1 .reveal {
+    display: inline-block;
+    transform: translateY(110%);
+    animation: lineRise 900ms cubic-bezier(.7,0,.2,1) forwards;
+  }
+  h1 .accent { color: #c4f542; font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 0.5em; vertical-align: super; }
+  @keyframes lineRise { to { transform: translateY(0); } }
+
+  .right-col {
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    border-left: 1px solid rgba(255,255,255,0.08);
+    padding-left: 24px;
+    min-height: 60vh;
+  }
+  .marquee {
+    overflow: hidden; height: 60vh; mask-image: linear-gradient(180deg, transparent, #000 15%, #000 85%, transparent);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 15%, #000 85%, transparent);
+  }
+  .marquee-track {
+    display: flex; flex-direction: column; gap: 18px;
+    animation: scrollY 30s linear infinite;
+    text-transform: uppercase; font-size: 13px; letter-spacing: 0.1em;
+    color: #8a8a94;
+  }
+  .marquee-track .row { display: flex; justify-content: space-between; gap: 16px; }
+  .marquee-track .row span:first-child { color: #f5f5f7; font-weight: 500; }
+  @keyframes scrollY {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+
+  .info {
+    text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em;
+    color: #8a8a94; padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    line-height: 1.8;
+  }
+  .info strong { color: #f5f5f7; font-weight: 500; }
+
+  footer {
+    position: relative; z-index: 10;
+    display: flex; justify-content: space-between; align-items: end;
+    padding: 24px 32px;
+    text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px;
+    color: #8a8a94;
+  }
+  footer .ctas { display: flex; gap: 16px; }
+  footer a { color: #f5f5f7; text-decoration: none; }
+  footer a:hover { color: #c4f542; }
+
+  /* Hairline + count */
+  .hairline {
+    position: relative; z-index: 10;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 18px 32px;
+    display: flex; justify-content: space-between;
+    text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px;
+    color: #8a8a94;
+  }
+  .hairline strong { color: #f5f5f7; font-weight: 500; }
+
+  @media (max-width: 760px) {
+    body { cursor: auto; }
+    .cursor, .glow { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 100px 20px 40px; }
+    .right-col { border-left: none; padding-left: 0; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 24px; }
+    .marquee { height: 200px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    h1 .reveal { transform: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="cursor" id="cursor"></div>
+  <div class="glow" id="glow"></div>
+
+  <header>
+    <div class="mark">Lukáš Vondra</div>
+    <div class="meta">
+      <span>Prague · 13:42 CET</span>
+      <span>2026 / Index</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>
+      <span class="line"><span class="reveal" style="animation-delay: 100ms">Designer</span></span>
+      <span class="line"><span class="reveal" style="animation-delay: 220ms">crafting</span></span>
+      <span class="line"><span class="reveal" style="animation-delay: 340ms"><em>brand</em>, motion</span></span>
+      <span class="line"><span class="reveal" style="animation-delay: 460ms">&amp; interface. <span class="accent">↗</span></span></span>
+    </h1>
+
+    <div class="right-col">
+      <div class="marquee">
+        <div class="marquee-track">
+          <div class="row"><span>Northwind</span><span>2025 — Identity</span></div>
+          <div class="row"><span>Atlas/AI</span><span>2025 — Product</span></div>
+          <div class="row"><span>Lumen Co</span><span>2024 — Brand</span></div>
+          <div class="row"><span>Vector Labs</span><span>2024 — Web</span></div>
+          <div class="row"><span>Pyra</span><span>2024 — Motion</span></div>
+          <div class="row"><span>Forma</span><span>2023 — Identity</span></div>
+          <div class="row"><span>Telia</span><span>2023 — Campaign</span></div>
+          <div class="row"><span>Mercury</span><span>2023 — Web</span></div>
+          <!-- duplicate for seamless loop -->
+          <div class="row"><span>Northwind</span><span>2025 — Identity</span></div>
+          <div class="row"><span>Atlas/AI</span><span>2025 — Product</span></div>
+          <div class="row"><span>Lumen Co</span><span>2024 — Brand</span></div>
+          <div class="row"><span>Vector Labs</span><span>2024 — Web</span></div>
+          <div class="row"><span>Pyra</span><span>2024 — Motion</span></div>
+          <div class="row"><span>Forma</span><span>2023 — Identity</span></div>
+          <div class="row"><span>Telia</span><span>2023 — Campaign</span></div>
+          <div class="row"><span>Mercury</span><span>2023 — Web</span></div>
+        </div>
+      </div>
+      <div class="info">
+        <strong>Currently</strong><br />
+        Booking projects for Q3 2026.<br />
+        Selected studio &amp; in-house roles.
+      </div>
+    </div>
+  </section>
+
+  <div class="hairline">
+    <span><strong>42</strong> selected projects · <strong>11</strong> years independent</span>
+    <span>Index ↓</span>
+  </div>
+
+  <footer>
+    <span>© 2026 Lukáš Vondra Studio</span>
+    <div class="ctas">
+      <a href="#" class="hov">See selected work</a>
+      <a href="mailto:hi@example.com" class="hov">hi@vondra.studio</a>
+    </div>
+  </footer>
+
+<script>
+  // Custom cursor + glow
+  const cursor = document.getElementById('cursor');
+  const glow = document.getElementById('glow');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (!reduced && window.matchMedia('(min-width: 761px)').matches) {
+    document.addEventListener('mousemove', (e) => {
+      cursor.style.top = e.clientY + 'px';
+      cursor.style.left = e.clientX + 'px';
+      glow.style.top = e.clientY + 'px';
+      glow.style.left = e.clientX + 'px';
+    });
+    document.querySelectorAll('a, .hov').forEach((el) => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+    });
+  }
+</script>
+</body>
+</html>
