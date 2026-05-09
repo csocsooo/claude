@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arnox — The compute fabric for autonomous agents.</title>
+<meta name="description" content="Arnox is the settlement and compute fabric powering the next generation of autonomous AI agents. Permissionless. Verifiable. Onchain." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- reset & base ---------- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: #05000c;
+    color: #fff;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+  ::selection { background: #00f0ff; color: #05000c; }
+  a { color: inherit; }
+  button { font: inherit; cursor: pointer; }
+
+  /* ---------- background canvas (pinned full viewport) ---------- */
+  #scene {
+    position: fixed; inset: 0; z-index: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none;
+  }
+  .grid-floor {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 60vh; z-index: 1;
+    background:
+      linear-gradient(180deg, transparent 0%, #05000c 92%),
+      linear-gradient(0deg, rgba(0,240,255,0.16) 1px, transparent 1px) 0 0 / 80px 80px,
+      linear-gradient(90deg, rgba(0,240,255,0.16) 1px, transparent 1px) 0 0 / 80px 80px;
+    transform: perspective(900px) rotateX(64deg);
+    transform-origin: bottom;
+    animation: floorScroll 8s linear infinite;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  @keyframes floorScroll {
+    from { background-position: 0 0, 0 0, 0 0; }
+    to   { background-position: 0 0, 0 80px, 0 0; }
+  }
+  .vignette {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(5,0,12,0.7) 80%, rgba(5,0,12,0.95) 100%);
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0.07;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 32px;
+    text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px;
+    color: #b8b8d4;
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    background: rgba(5, 0, 12, 0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  nav .mark {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 18px; color: #fff; letter-spacing: -0.02em; text-transform: none;
+    display: flex; align-items: center; gap: 10px;
+  }
+  nav .mark::before {
+    content: ''; width: 12px; height: 12px;
+    background: linear-gradient(135deg, #00f0ff, #ff2ec4);
+    border-radius: 3px; transform: rotate(45deg);
+    box-shadow: 0 0 14px #00f0ff80;
+    animation: markSpin 12s linear infinite;
+  }
+  @keyframes markSpin { to { transform: rotate(405deg); } }
+  nav ul { display: flex; gap: 28px; list-style: none; }
+  nav ul a { text-decoration: none; transition: color 150ms ease; }
+  nav ul a:hover { color: #00f0ff; }
+  nav .nav-cta {
+    padding: 10px 18px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.18); color: #fff; text-decoration: none;
+    transition: all 220ms ease;
+  }
+  nav .nav-cta:hover {
+    border-color: #00f0ff;
+    box-shadow: 0 0 24px rgba(0,240,255,0.4);
+    color: #00f0ff;
+  }
+
+  /* ---------- shared section layout ---------- */
+  main { position: relative; z-index: 5; }
+  section {
+    position: relative;
+    min-height: 100vh;
+    padding: 120px 32px;
+    display: grid;
+    place-items: center;
+  }
+  .container { max-width: 1200px; width: 100%; margin: 0 auto; }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 6px 14px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(8px);
+    text-transform: uppercase; letter-spacing: 0.16em; font-size: 11px;
+    color: #b8b8d4;
+  }
+  .eyebrow .live {
+    width: 6px; height: 6px; border-radius: 50%; background: #00f0ff;
+    box-shadow: 0 0 12px #00f0ff;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  /* ---------- hero ---------- */
+  .hero { text-align: center; }
+  .hero .eyebrow { margin-bottom: 36px; }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; letter-spacing: -0.04em;
+    font-size: clamp(56px, 9.5vw, 156px);
+    line-height: 0.92;
+    max-width: 17ch; margin: 0 auto;
+  }
+  h1 .stack { display: block; overflow: hidden; }
+  h1 .reveal {
+    display: inline-block;
+    transform: translateY(110%);
+    will-change: transform;
+  }
+  h1 .glow {
+    background: linear-gradient(135deg, #00f0ff 0%, #c540ff 60%, #ff2ec4 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 30px rgba(0,240,255,0.35));
+  }
+  .hero-sub {
+    margin-top: 28px;
+    font-size: 15px; color: #b8b8d4;
+    max-width: 60ch; margin-left: auto; margin-right: auto;
+    line-height: 1.6;
+  }
+  .hero-sub strong { color: #fff; font-weight: 500; }
+  .ctas {
+    display: flex; gap: 14px; justify-content: center; margin-top: 40px;
+    flex-wrap: wrap;
+  }
+  .ctas a {
+    padding: 14px 26px; border-radius: 999px;
+    text-decoration: none; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 500;
+    transition: all 220ms ease;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .ctas .primary {
+    background: linear-gradient(135deg, #00f0ff, #ff2ec4);
+    color: #05000c;
+    box-shadow: 0 10px 40px -10px rgba(0,240,255,0.55);
+  }
+  .ctas .primary:hover {
+    box-shadow: 0 15px 50px -10px rgba(0,240,255,0.75);
+    transform: translateY(-2px);
+  }
+  .ctas .ghost {
+    border: 1px solid rgba(255,255,255,0.22); color: #fff;
+    background: rgba(255,255,255,0.03); backdrop-filter: blur(8px);
+  }
+  .ctas .ghost:hover { border-color: #00f0ff; color: #00f0ff; }
+
+  .stats-row {
+    display: flex; justify-content: center; gap: 56px;
+    margin-top: 100px; padding: 22px 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-wrap: wrap;
+  }
+  .stats-row .v {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 26px; color: #fff; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stats-row .l {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em;
+    color: #b8b8d4; margin-top: 6px;
+  }
+
+  /* ---------- manifesto ---------- */
+  .manifesto { text-align: left; }
+  .manifesto .container { max-width: 1100px; }
+  .manifesto h2 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 500;
+    font-size: clamp(36px, 5.5vw, 84px);
+    line-height: 1.05; letter-spacing: -0.03em;
+    color: #fff; max-width: 22ch;
+  }
+  .manifesto h2 em {
+    font-style: normal;
+    background: linear-gradient(135deg, #00f0ff, #ff2ec4);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .manifesto .sig {
+    margin-top: 64px; display: flex; gap: 64px; flex-wrap: wrap;
+    text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px;
+    color: #b8b8d4;
+  }
+  .manifesto .sig strong { color: #fff; font-weight: 500; display: block; margin-bottom: 4px; }
+
+  /* ---------- features ---------- */
+  .features { padding-top: 80px; }
+  .features-head {
+    display: flex; justify-content: space-between; align-items: end;
+    flex-wrap: wrap; gap: 24px;
+    margin-bottom: 60px;
+  }
+  .features-head h2 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: clamp(32px, 4.5vw, 64px); letter-spacing: -0.03em;
+    line-height: 1.05; max-width: 16ch;
+  }
+  .features-head p { color: #b8b8d4; max-width: 38ch; font-size: 14px; line-height: 1.6; }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  }
+  .card {
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.02);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    border-radius: 18px;
+    padding: 32px;
+    min-height: 320px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: border-color 250ms ease, transform 250ms ease, box-shadow 250ms ease;
+    overflow: hidden;
+    will-change: transform;
+  }
+  .card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(800px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(0, 240, 255, 0.10), transparent 40%);
+    opacity: 0; transition: opacity 250ms ease;
+    pointer-events: none;
+  }
+  .card:hover {
+    border-color: rgba(0, 240, 255, 0.4);
+    box-shadow: 0 20px 60px -20px rgba(0, 240, 255, 0.3);
+    transform: translateY(-4px);
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card .icon {
+    width: 44px; height: 44px; border-radius: 11px;
+    background: linear-gradient(135deg, rgba(0,240,255,0.2), rgba(255,46,196,0.2));
+    border: 1px solid rgba(255,255,255,0.15);
+    display: grid; place-items: center;
+    color: #00f0ff;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px;
+  }
+  .card h3 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 22px; margin-top: 24px; letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .card p { color: #b8b8d4; font-size: 13px; line-height: 1.65; margin-top: 12px; }
+  .card .meta {
+    margin-top: 24px;
+    text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px;
+    color: #8a8a94;
+    display: flex; justify-content: space-between;
+  }
+  .card .meta .badge { color: #00f0ff; }
+
+  /* ---------- how it works (pinned scroll) ---------- */
+  .how {
+    padding: 0;
+    min-height: auto;
+  }
+  .how-pin {
+    height: 100vh;
+    position: sticky; top: 0;
+    display: grid; grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 0 48px;
+    gap: 48px;
+  }
+  .how-track {
+    /* outer wrapper that gives ScrollTrigger room to scrub */
+    height: 320vh;
+    position: relative;
+  }
+  .how-text { max-width: 520px; }
+  .how-text .eyebrow { margin-bottom: 24px; }
+  .how-step {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center;
+    opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  .how-step.active { opacity: 1; }
+  .how-step .num {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 14px; color: #00f0ff; letter-spacing: 0.14em;
+    margin-bottom: 16px;
+  }
+  .how-step h3 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: clamp(32px, 4vw, 56px); letter-spacing: -0.03em;
+    line-height: 1.05; margin-bottom: 20px;
+  }
+  .how-step p { color: #b8b8d4; font-size: 15px; line-height: 1.6; }
+  .how-text-wrap { position: relative; height: 280px; }
+
+  .how-progress {
+    display: flex; gap: 8px; margin-top: 32px;
+  }
+  .how-progress .dot {
+    width: 30px; height: 2px; background: rgba(255,255,255,0.15);
+    transition: background 300ms ease;
+  }
+  .how-progress .dot.on { background: #00f0ff; box-shadow: 0 0 10px #00f0ff; }
+
+  /* The right column is intentionally empty — the pinned background canvas
+     already shows the morphing 3D geometry behind everything. */
+  .how-3d-spacer { position: relative; }
+
+  /* ---------- stats / proof ---------- */
+  .proof { text-align: center; }
+  .proof .container { max-width: 1100px; }
+  .proof h2 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 500;
+    font-size: clamp(28px, 3.6vw, 44px); letter-spacing: -0.02em;
+    line-height: 1.2; max-width: 24ch; margin: 24px auto 0;
+    color: #b8b8d4;
+  }
+  .proof h2 strong { color: #fff; font-weight: 600; }
+  .proof .big-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; margin-top: 80px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.08);
+  }
+  .proof .big-stats .cell {
+    background: #05000c;
+    padding: 40px 24px;
+    text-align: left;
+  }
+  .proof .big-stats .v {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: clamp(36px, 4.5vw, 64px); letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #fff, #b8b8d4);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .proof .big-stats .l {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: #b8b8d4; margin-top: 12px;
+  }
+
+  .logos {
+    margin-top: 80px; padding-top: 32px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .logos .label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em;
+    color: #8a8a94; margin-bottom: 24px;
+  }
+  .logos .row {
+    display: flex; justify-content: center; gap: 48px; flex-wrap: wrap;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 20px;
+    color: #b8b8d4; letter-spacing: -0.02em;
+  }
+  .logos .row span {
+    transition: color 200ms ease, opacity 200ms ease;
+    opacity: 0.55; cursor: default;
+  }
+  .logos .row span:hover { color: #00f0ff; opacity: 1; }
+
+  /* ---------- final CTA ---------- */
+  .final { text-align: center; min-height: 90vh; }
+  .final h2 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: clamp(48px, 8vw, 128px);
+    line-height: 0.95; letter-spacing: -0.04em;
+    max-width: 14ch; margin: 32px auto 0;
+  }
+  .final h2 em {
+    font-style: normal;
+    background: linear-gradient(135deg, #00f0ff 0%, #c540ff 50%, #ff2ec4 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 30px rgba(0,240,255,0.35));
+  }
+  .final p { color: #b8b8d4; max-width: 56ch; margin: 28px auto 0; font-size: 15px; line-height: 1.6; }
+
+  /* ---------- footer ---------- */
+  footer {
+    position: relative; z-index: 5;
+    padding: 48px 32px 32px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px;
+    color: #8a8a94;
+  }
+  footer .container {
+    display: flex; justify-content: space-between; align-items: end;
+    flex-wrap: wrap; gap: 24px;
+  }
+  footer .col { display: flex; flex-direction: column; gap: 10px; }
+  footer .col strong { color: #fff; font-weight: 500; margin-bottom: 6px; }
+  footer a { color: #b8b8d4; text-decoration: none; transition: color 200ms ease; }
+  footer a:hover { color: #00f0ff; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 880px) {
+    nav ul { display: none; }
+    nav { padding: 14px 20px; }
+    section { padding: 100px 20px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .how-pin { grid-template-columns: 1fr; padding: 0 24px; }
+    .how-3d-spacer { display: none; }
+    .how-track { height: 240vh; }
+    .proof .big-stats { grid-template-columns: repeat(2, 1fr); }
+    .stats-row { gap: 28px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+    h1 .reveal { transform: none; }
+    .grid-floor { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <canvas id="scene" aria-hidden="true"></canvas>
+  <div class="grid-floor" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <nav>
+    <a href="#" class="mark">Arnox</a>
+    <ul>
+      <li><a href="#protocol">Protocol</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#proof">Adoption</a></li>
+      <li><a href="https://docs.arnox.dev">Docs</a></li>
+    </ul>
+    <a href="#" class="nav-cta">Launch app</a>
+  </nav>
+
+  <main>
+    <!-- ============== HERO ============== -->
+    <section class="hero" id="hero">
+      <div class="container">
+        <div class="eyebrow"><span class="live"></span><span>Mainnet · v3 · 11 chains live</span></div>
+        <h1>
+          <span class="stack"><span class="reveal" data-reveal="1">The compute fabric</span></span>
+          <span class="stack"><span class="reveal" data-reveal="2">for <em class="glow">autonomous</em></span></span>
+          <span class="stack"><span class="reveal glow" data-reveal="3">agents.</span></span>
+        </h1>
+        <p class="hero-sub" data-fade>
+          A permissionless settlement layer where AI agents <strong>rent compute</strong>,
+          <strong>verify work</strong>, and <strong>pay each other</strong> — onchain,
+          in milliseconds. No keys. No middlemen.
+        </p>
+        <div class="ctas" data-fade>
+          <a href="#" class="primary">Launch app →</a>
+          <a href="#" class="ghost">Read the whitepaper</a>
+        </div>
+
+        <div class="stats-row" data-fade>
+          <div><div class="v" data-target="2.4" data-prefix="$" data-suffix="B">$0.0B</div><div class="l">Total settled</div></div>
+          <div><div class="v" data-target="148">0</div><div class="l">Agent runtimes</div></div>
+          <div><div class="v" data-target="11">0</div><div class="l">Chains</div></div>
+          <div><div class="v" data-target="0.4" data-suffix="ms">0ms</div><div class="l">Avg. settle</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== MANIFESTO ============== -->
+    <section class="manifesto" id="protocol">
+      <div class="container">
+        <span class="eyebrow" data-reveal-section><span class="live"></span><span>The thesis</span></span>
+        <h2 data-reveal-section style="margin-top: 32px;">
+          The next billion users won't be people. They'll be <em>agents</em> — and they need
+          their own infrastructure.
+        </h2>
+        <div class="sig" data-reveal-section>
+          <div><strong>Permissionless</strong>any agent can transact</div>
+          <div><strong>Verifiable</strong>cryptographic proof of compute</div>
+          <div><strong>Sub-second</strong>microtransactions at machine speed</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== FEATURES ============== -->
+    <section class="features">
+      <div class="container">
+        <div class="features-head" data-reveal-section>
+          <h2>Three primitives. One protocol.</h2>
+          <p>Arnox unifies compute brokerage, proof-of-execution, and machine-to-machine settlement into a single, audited layer-2.</p>
+        </div>
+        <div class="features-grid">
+          <div class="card" data-tilt data-reveal-section>
+            <div class="icon">⌬</div>
+            <div>
+              <h3>Compute brokerage</h3>
+              <p>A permissionless market matching agent workloads to GPU and CPU capacity across 14 verified providers — priced by the millisecond.</p>
+            </div>
+            <div class="meta"><span>01 / Compute</span><span class="badge">live</span></div>
+          </div>
+          <div class="card" data-tilt data-reveal-section>
+            <div class="icon">◇</div>
+            <div>
+              <h3>Proof of execution</h3>
+              <p>Every job emits a zero-knowledge attestation of inputs, outputs, and the model that produced them. Audit-grade by default.</p>
+            </div>
+            <div class="meta"><span>02 / Verify</span><span class="badge">live</span></div>
+          </div>
+          <div class="card" data-tilt data-reveal-section>
+            <div class="icon">⌖</div>
+            <div>
+              <h3>Sub-second settle</h3>
+              <p>Microtransactions clear in &lt; 400ms across 11 chains. Agents pay agents directly — no relayers, no bridges, no humans in the loop.</p>
+            </div>
+            <div class="meta"><span>03 / Settle</span><span class="badge">live</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== HOW IT WORKS (pinned scroll) ============== -->
+    <section class="how" id="how">
+      <div class="how-track" id="how-track">
+        <div class="how-pin">
+          <div class="how-text">
+            <div class="eyebrow"><span class="live"></span><span>How it works</span></div>
+            <div class="how-text-wrap">
+              <div class="how-step active" data-step="0">
+                <div class="num">01 / REQUEST</div>
+                <h3>An agent posts a job.</h3>
+                <p>Any autonomous program can call <code>arnox.run(intent)</code>. The intent is signed, broadcast, and immediately quoted by the marketplace.</p>
+              </div>
+              <div class="how-step" data-step="1">
+                <div class="num">02 / EXECUTE</div>
+                <h3>A provider claims it.</h3>
+                <p>Bonded compute providers race to fulfill. Execution is sandboxed and produces a deterministic output paired with a ZK proof.</p>
+              </div>
+              <div class="how-step" data-step="2">
+                <div class="num">03 / SETTLE</div>
+                <h3>Payment clears in 400ms.</h3>
+                <p>The proof verifies on-chain, payment routes to the provider, and the calling agent receives the verified output — all in one round-trip.</p>
+              </div>
+            </div>
+            <div class="how-progress">
+              <div class="dot on"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
+          </div>
+          <div class="how-3d-spacer" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== STATS / PROOF ============== -->
+    <section class="proof" id="proof">
+      <div class="container">
+        <span class="eyebrow"><span class="live"></span><span>Live network</span></span>
+        <h2><strong>Built by</strong> the teams behind Filecoin, Optimism, and EigenLayer. <strong>Audited by</strong> Trail of Bits and OpenZeppelin.</h2>
+
+        <div class="big-stats">
+          <div class="cell">
+            <div class="v" data-target="2.4" data-prefix="$" data-suffix="B">$0.0B</div>
+            <div class="l">Total volume</div>
+          </div>
+          <div class="cell">
+            <div class="v" data-target="42.1" data-prefix="$" data-suffix="M">$0.0M</div>
+            <div class="l">Daily settlement</div>
+          </div>
+          <div class="cell">
+            <div class="v" data-target="148">0</div>
+            <div class="l">Agent runtimes</div>
+          </div>
+          <div class="cell">
+            <div class="v" data-target="0">0bps</div>
+            <div class="l">Origination fee</div>
+          </div>
+        </div>
+
+        <div class="logos">
+          <div class="label">Powering autonomous teams at</div>
+          <div class="row">
+            <span>Anthropic Labs</span>
+            <span>Replicate</span>
+            <span>Fly.io</span>
+            <span>Vector AI</span>
+            <span>Lumen</span>
+            <span>Pyra</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== FINAL CTA ============== -->
+    <section class="final" id="final">
+      <div class="container">
+        <div class="eyebrow" data-reveal-section><span class="live"></span><span>Ready when you are</span></div>
+        <h2 data-reveal-section>
+          Build the <em>agent economy</em>.
+        </h2>
+        <p data-reveal-section>
+          Open a wallet, fund a runtime, ship your first autonomous job in under five minutes. Free for the first 10,000 settlements per month.
+        </p>
+        <div class="ctas" data-reveal-section>
+          <a href="#" class="primary">Launch app →</a>
+          <a href="#" class="ghost">Talk to an engineer</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="col">
+        <strong>Arnox</strong>
+        <span>© 2026 Arnox Labs · Berlin · NYC</span>
+      </div>
+      <div class="col">
+        <strong>Protocol</strong>
+        <a href="#">Whitepaper</a>
+        <a href="#">Audits</a>
+        <a href="#">Governance</a>
+      </div>
+      <div class="col">
+        <strong>Build</strong>
+        <a href="#">Documentation</a>
+        <a href="#">SDK</a>
+        <a href="#">Bounties</a>
+      </div>
+      <div class="col">
+        <strong>Contact</strong>
+        <a href="mailto:hi@arnox.dev">hi@arnox.dev</a>
+        <a href="#">@arnox_protocol</a>
+      </div>
+    </div>
+  </footer>
+
+<!-- ============== Three.js scene + GSAP scroll wiring ============== -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+<script type="module">
+  import * as THREE from 'three';
+  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+  import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
+  import { UnrealBloomPass }from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+  gsap.registerPlugin(ScrollTrigger);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // --- renderer / scene / camera ---
+  const canvas = document.getElementById('scene');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x05000c, 0.06);
+
+  const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 6);
+
+  // --- lights (subtle — the look comes from the shader + bloom) ---
+  scene.add(new THREE.AmbientLight(0x404060, 0.6));
+  const key = new THREE.PointLight(0x00f0ff, 1.4, 30);
+  key.position.set(4, 3, 4); scene.add(key);
+  const rim = new THREE.PointLight(0xff2ec4, 1.2, 30);
+  rim.position.set(-4, -2, 2); scene.add(rim);
+
+  // --- centerpiece: high-detail icosahedron with custom iridescent shader ---
+  const centerGeom = new THREE.IcosahedronGeometry(1.6, 64);
+  const centerMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime:    { value: 0 },
+      uDispAmp: { value: 0.18 },
+      uColorA:  { value: new THREE.Color(0x00f0ff) },
+      uColorB:  { value: new THREE.Color(0xff2ec4) },
+      uColorC:  { value: new THREE.Color(0xc540ff) },
+      uMix:     { value: 0.0 },
+    },
+    vertexShader: /* glsl */ `
+      uniform float uTime;
+      uniform float uDispAmp;
+      varying vec3 vNormal;
+      varying vec3 vView;
+      varying float vDisp;
+
+      // Simplex-ish 3D noise (Stefan Gustavson, simplified)
+      vec4 mod289(vec4 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+      vec4 perm(vec4 x){ return mod289(((x * 34.0) + 1.0) * x); }
+      float noise(vec3 p){
+        vec3 a = floor(p);
+        vec3 d = p - a;
+        d = d * d * (3.0 - 2.0 * d);
+        vec4 b = a.xxyy + vec4(0.0, 1.0, 0.0, 1.0);
+        vec4 k1 = perm(b.xyxy);
+        vec4 k2 = perm(k1.xyxy + b.zzww);
+        vec4 c = k2 + a.zzzz;
+        vec4 k3 = perm(c);
+        vec4 k4 = perm(c + 1.0);
+        vec4 o1 = fract(k3 * (1.0/41.0));
+        vec4 o2 = fract(k4 * (1.0/41.0));
+        vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+        vec2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
+        return o4.y * d.y + o4.x * (1.0 - d.y);
+      }
+
+      void main() {
+        float n = noise(position * 1.6 + uTime * 0.35);
+        float disp = (n - 0.5) * uDispAmp * 2.0;
+        vec3 displaced = position + normal * disp;
+        vDisp = disp;
+
+        vec4 mv = modelViewMatrix * vec4(displaced, 1.0);
+        vNormal = normalize(normalMatrix * normal);
+        vView   = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uColorA;
+      uniform vec3 uColorB;
+      uniform vec3 uColorC;
+      uniform float uTime;
+      uniform float uMix;
+      varying vec3 vNormal;
+      varying vec3 vView;
+      varying float vDisp;
+
+      void main() {
+        float fres = pow(1.0 - max(dot(vNormal, vView), 0.0), 2.2);
+        // Iridescent ramp: A → C → B by fresnel + subtle time wobble
+        float t = clamp(fres + sin(uTime * 0.4) * 0.06, 0.0, 1.0);
+        vec3 col = mix(uColorB, uColorC, smoothstep(0.0, 0.55, t));
+        col = mix(col, uColorA, smoothstep(0.55, 1.0, t));
+        // Boost emission with displacement so peaks glow
+        col += abs(vDisp) * 1.5 * uColorA;
+        // Section-mix lift — used to "morph" colors across the scroll
+        col = mix(col, vec3(1.0) - col, uMix * 0.0);
+        col += uMix * 0.15 * uColorA;
+        gl_FragColor = vec4(col, 0.92);
+      }
+    `,
+    transparent: true,
+  });
+  const center = new THREE.Mesh(centerGeom, centerMat);
+  scene.add(center);
+
+  // --- wireframe shell around it for extra structure ---
+  const wireGeom = new THREE.IcosahedronGeometry(2.1, 1);
+  const wireMat = new THREE.MeshBasicMaterial({
+    color: 0x00f0ff, wireframe: true, transparent: true, opacity: 0.18,
+  });
+  const wire = new THREE.Mesh(wireGeom, wireMat);
+  scene.add(wire);
+
+  // --- particle cloud ---
+  const PARTICLES = 1800;
+  const pGeom = new THREE.BufferGeometry();
+  const pPos = new Float32Array(PARTICLES * 3);
+  const pSpd = new Float32Array(PARTICLES);
+  for (let i = 0; i < PARTICLES; i++) {
+    const r = 4 + Math.random() * 12;
+    const t = Math.random() * Math.PI * 2;
+    const p = Math.acos(2 * Math.random() - 1);
+    pPos[i*3]   = r * Math.sin(p) * Math.cos(t);
+    pPos[i*3+1] = r * Math.sin(p) * Math.sin(t);
+    pPos[i*3+2] = r * Math.cos(p);
+    pSpd[i]     = 0.5 + Math.random() * 1.5;
+  }
+  pGeom.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const pMat = new THREE.PointsMaterial({
+    color: 0x9ad6ff, size: 0.035, transparent: true, opacity: 0.7,
+    sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const points = new THREE.Points(pGeom, pMat);
+  scene.add(points);
+
+  // --- post-processing: bloom for the neon glow ---
+  const composer = new EffectComposer(renderer);
+  composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  composer.setSize(window.innerWidth, window.innerHeight);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.95,   // strength
+    0.6,   // radius
+    0.18,  // threshold
+  );
+  composer.addPass(bloom);
+
+  // --- resize ---
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // --- mouse parallax ---
+  const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+  if (!reduced) {
+    window.addEventListener('mousemove', (e) => {
+      mouse.tx = (e.clientX / window.innerWidth - 0.5) * 0.6;
+      mouse.ty = (e.clientY / window.innerHeight - 0.5) * 0.4;
+    });
+  }
+
+  // --- scroll-driven scene state ---
+  // Keys: hero, manifesto, features, how (3 sub-steps), proof, final
+  // The whole page scroll progress drives center.position, scale, color mix.
+  const sceneState = { x: 0, y: 0, z: 6, rotX: 0, rotY: 0, scale: 1.0, dispAmp: 0.18, mix: 0.0, particleSpeed: 1.0 };
+
+  if (!reduced) {
+    // Master scroll timeline that scrubs as you scroll the entire page.
+    const master = gsap.timeline({
+      scrollTrigger: {
+        trigger: 'body',
+        start:   'top top',
+        end:     'bottom bottom',
+        scrub:   1.2,
+      }
+    });
+    master
+      .to(sceneState, { x: -1.4, y: 0.4, z: 7, rotY: 0.6, scale: 0.9, dispAmp: 0.32, mix: 0.2, particleSpeed: 1.4 })  // → manifesto
+      .to(sceneState, { x: 2.0, y: -0.2, z: 8, rotY: 1.6, scale: 0.7, dispAmp: 0.45, mix: 0.4, particleSpeed: 1.8 })  // → features
+      .to(sceneState, { x: 1.5, y: 0.0, z: 5, rotY: 2.4, scale: 1.1, dispAmp: 0.55, mix: 0.6, particleSpeed: 2.2 })   // → how-it-works
+      .to(sceneState, { x: -0.6, y: 0.3, z: 9, rotY: 3.4, scale: 0.85, dispAmp: 0.30, mix: 0.4, particleSpeed: 1.5 })  // → proof
+      .to(sceneState, { x: 0, y: 0, z: 4, rotY: 4.6, scale: 1.4, dispAmp: 0.25, mix: 0.0, particleSpeed: 1.0 });       // → final
+  }
+
+  // --- "How it works" pinned step indicator ---
+  const howSteps = document.querySelectorAll('.how-step');
+  const howDots  = document.querySelectorAll('.how-progress .dot');
+  const howTrack = document.getElementById('how-track');
+
+  if (howTrack && !reduced) {
+    ScrollTrigger.create({
+      trigger: howTrack,
+      start: 'top top',
+      end: 'bottom bottom',
+      onUpdate: (self) => {
+        const idx = Math.min(2, Math.floor(self.progress * 3));
+        howSteps.forEach((el, i) => el.classList.toggle('active', i === idx));
+        howDots.forEach((el, i) => el.classList.toggle('on', i <= idx));
+      }
+    });
+  }
+
+  // --- count-up numbers (intersection observer) ---
+  const counters = document.querySelectorAll('[data-target]');
+  const countObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      if (el.dataset.counted) return;
+      el.dataset.counted = '1';
+
+      const target = parseFloat(el.dataset.target);
+      const prefix = el.dataset.prefix || '';
+      const suffix = el.dataset.suffix || '';
+      const decimals = (el.dataset.target.split('.')[1] || '').length;
+
+      if (reduced || target === 0) {
+        el.textContent = prefix + target.toFixed(decimals) + (suffix || (el.textContent.match(/[a-zA-Z]+$/)?.[0] || ''));
+        return;
+      }
+
+      const start = performance.now();
+      const dur = 1600;
+      function tick(now) {
+        const p = Math.min((now - start) / dur, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const v = target * eased;
+        el.textContent = prefix + v.toFixed(decimals) + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }, { threshold: 0.4 });
+  counters.forEach((el) => countObserver.observe(el));
+
+  // --- card hover glow tracking ---
+  document.querySelectorAll('[data-tilt]').forEach((card) => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty('--mx', (e.clientX - rect.left) + 'px');
+      card.style.setProperty('--my', (e.clientY - rect.top) + 'px');
+    });
+  });
+
+  // --- entry animations: hero text reveal + section reveals ---
+  if (!reduced) {
+    gsap.set('[data-fade]', { autoAlpha: 0, y: 14 });
+    gsap.timeline({ delay: 0.15 })
+      .to('[data-reveal="1"]', { y: 0, duration: 0.9, ease: 'expo.out' })
+      .to('[data-reveal="2"]', { y: 0, duration: 0.9, ease: 'expo.out' }, '-=0.7')
+      .to('[data-reveal="3"]', { y: 0, duration: 0.9, ease: 'expo.out' }, '-=0.7')
+      .to('[data-fade]',       { autoAlpha: 1, y: 0, duration: 0.8, stagger: 0.08, ease: 'power2.out' }, '-=0.5');
+
+    gsap.utils.toArray('[data-reveal-section]').forEach((el) => {
+      gsap.from(el, {
+        scrollTrigger: { trigger: el, start: 'top 85%' },
+        autoAlpha: 0, y: 24, duration: 0.8, ease: 'power2.out',
+      });
+    });
+  } else {
+    document.querySelectorAll('h1 .reveal').forEach(el => el.style.transform = 'translateY(0)');
+    document.querySelectorAll('[data-fade]').forEach(el => { el.style.opacity = 1; });
+  }
+
+  // --- main render loop ---
+  const clock = new THREE.Clock();
+  function tick() {
+    requestAnimationFrame(tick);
+    const t = clock.getElapsedTime();
+
+    // Smoothly lerp the scroll-driven state into the actual transforms.
+    center.position.x  += (sceneState.x  - center.position.x)  * 0.06;
+    center.position.y  += (sceneState.y  - center.position.y)  * 0.06;
+    camera.position.z  += (sceneState.z  - camera.position.z)  * 0.06;
+    center.scale.setScalar(center.scale.x + (sceneState.scale - center.scale.x) * 0.06);
+    centerMat.uniforms.uDispAmp.value += (sceneState.dispAmp - centerMat.uniforms.uDispAmp.value) * 0.06;
+    centerMat.uniforms.uMix.value     += (sceneState.mix     - centerMat.uniforms.uMix.value)     * 0.06;
+
+    // Continuous rotation + scroll-driven yaw bias.
+    if (!reduced) {
+      center.rotation.x += 0.0035;
+      center.rotation.y += 0.005;
+      center.rotation.y += (sceneState.rotY - center.rotation.y % (Math.PI * 2)) * 0.0;
+      wire.rotation.copy(center.rotation);
+      wire.rotation.x *= -1;
+      wire.rotation.y += 0.001;
+      points.rotation.y += 0.0008 * sceneState.particleSpeed;
+      points.rotation.x += 0.0003;
+    }
+
+    // Mouse parallax on the camera (subtle).
+    if (!reduced) {
+      mouse.x += (mouse.tx - mouse.x) * 0.06;
+      mouse.y += (mouse.ty - mouse.y) * 0.06;
+      camera.position.x = mouse.x * 0.5;
+      camera.position.y = -mouse.y * 0.4;
+      camera.lookAt(center.position.x * 0.3, center.position.y * 0.3, 0);
+    }
+
+    centerMat.uniforms.uTime.value = t;
+    composer.render();
+  }
+  tick();
+</script>
+</body>
+</html>
