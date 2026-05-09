@@ -24,6 +24,8 @@
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
       "Bash(curl --fail --location *)",
+      "Bash(curl --fail --location --silent *)",
+      "Bash(curl -s *)",
       "Bash(bash skills/3d-builder/scripts/*.sh:*)",
       "Bash(bash ~/.claude/skills/3d-builder/scripts/*.sh:*)",
       "Bash(mkdir -p:*)",
@@ -37,7 +39,15 @@
       "Bash(wc:*)",
       "Bash(file:*)",
       "Bash(du:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(jq:*)"
     ],
     "deny": [
       "Bash(rm -rf /:*)",
@@ -63,7 +73,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if [ -d skills/3d-builder ] && [ ! -x skills/3d-builder/scripts/scaffold.sh ]; then chmod +x skills/3d-builder/scripts/*.sh; fi; echo \"3d-builder ready. Try: /3d-site <theme>\"'"
+            "command": "bash -c 'if [ -d skills/3d-builder ] && [ ! -x skills/3d-builder/scripts/scaffold.sh ]; then chmod +x skills/3d-builder/scripts/*.sh; fi; echo \"3d-builder ready. Commands: /3d-recon <url> | /3d-site <theme> [vite|business] | /3d-asset <desc> | /3d-deploy\"'"
           }
         ]
       }

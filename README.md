@@ -12,12 +12,14 @@ http://localhost:5173  →  rotating 3D scene, GSAP scroll, Tailwind, ready to d
 
 | Path | Purpose |
 |------|---------|
-| `commands/3d-site.md` | `/3d-site <theme> [style]` — scaffold + customize a full 3D site |
+| `commands/3d-recon.md` | `/3d-recon <url>` — scrape a target URL for colors/copy/images/logo |
+| `commands/3d-site.md` | `/3d-site <theme> [vite\|business] [--recon <dir>]` — scaffold + customize |
 | `commands/3d-asset.md` | `/3d-asset <description>` — fetch a CC0 model or HDRI and wire it in |
 | `commands/3d-deploy.md` | `/3d-deploy [dir]` — push to Vercel (or Cloudflare Pages) free tier |
 | `skills/3d-builder/` | Skill triggered when you mention 3D/R3F/Three.js — owns templates + scripts |
-| `skills/3d-builder/templates/r3f-vite/` | Vite + R3F + GSAP + Tailwind starter (TS) |
-| `skills/3d-builder/scripts/` | `scaffold.sh`, `fetch-cc0-model.sh`, `fetch-hdri.sh`, `optimize-glb.sh`, `deploy-vercel.sh` |
+| `skills/3d-builder/templates/r3f-vite/` | Minimal: hero + 3 features + CTA |
+| `skills/3d-builder/templates/r3f-business/` | Multi-section: nav + hero + 6 services + pinned project showcase + form + footer + SEO/JSON-LD |
+| `skills/3d-builder/scripts/` | `recon.sh`, `scaffold.sh`, `fetch-cc0-model.sh`, `fetch-hdri.sh`, `optimize-glb.sh`, `deploy-vercel.sh`, `lighthouse.sh` |
 | `agents/3d-architect.md` | Subagent for stack/architecture decisions before you commit to a build |
 | `mcp-servers/three-d-assets/` | MCP server for Sketchfab + Polyhaven + Meshy.ai search & generation |
 | `settings.json` | Permissions allowlist + MCP wiring + SessionStart hook |
@@ -49,34 +51,32 @@ cd .claude/mcp-servers/three-d-assets
 npm install && npm run build
 ```
 
-## Usage — the 1-2 prompt flow
+## Usage flows
 
-### Prompt 1 — scaffold
+### Flow A — fresh build (1-2 prompts)
+
 ```
 /3d-site "specialty coffee shop in Budapest" minimalista warm
-```
-
-Claude will:
-1. Pick a slug (`kavezo-budapest`)
-2. Copy the R3F template
-3. Replace `__PLACEHOLDER__` tokens with theme-appropriate copy + brand palette
-4. `npm install` + `npm run dev`
-5. Print the local URL
-
-### Prompt 2 — customize a 3D model
-```
 /3d-asset "coffee bean" model
+/3d-deploy           # optional
 ```
 
-Or just tell Claude in plain English:
+### Flow B — rebrand from existing URL (5-8 prompts, top quality)
+
+For top-quality production-ready output that mirrors an existing brand:
+
 ```
-Cseréld a hero modellt erre: https://poly.pizza/m/abc123 — és tedd reszponzívvá
+/3d-recon https://arnox.hu                                # scrape colors, copy, logo, images
+/3d-site arnox-rebrand business --recon ./recon-output    # scaffold business template with extracted data
+/3d-asset "modern villa exterior" model                   # hero 3D model (Sketchfab CC0)
+"Replace 6 service icons + copy with: Tervezés/Kivitelezés/Felújítás/Ingatlan/Anyagok/Finanszírozás"
+"Wire Szőlőliget Ökopark images from recon into ProjectShowcase, with stats + alts"
+"Set up Formspree endpoint in .env.local and verify form submit"
+"Polish: SEO meta + JSON-LD address + favicon from recon logo + reduced-motion check"
+/3d-deploy                                                # Vercel free tier
 ```
 
-### Prompt 3 (optional) — deploy
-```
-/3d-deploy
-```
+After deploy, run `bash skills/3d-builder/scripts/lighthouse.sh <live-url>` to verify scores.
 
 ## Optional API keys (free tiers)
 

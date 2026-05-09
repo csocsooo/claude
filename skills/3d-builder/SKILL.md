@@ -17,47 +17,104 @@ Activate this skill when the user asks for any of:
 - Free 3D asset fetching (Sketchfab CC0, Polyhaven, Quaternius)
 - Optimization (gltf-transform / draco) or deployment of a 3D site
 
+## Templates
+
+Two templates ship with this skill:
+
+### `r3f-vite` — minimal (default)
+
+Single-page hero + 3 features + CTA. Best for portfolios, single-product
+showcases, simple landings.
+
+```
+templates/r3f-vite/
+├── src/components/{Scene,Hero,Features,Contact}.tsx
+├── src/{App,main,index.css}
+└── {package.json,vite.config.ts,tsconfig.json,tailwind.config.js,...}
+```
+
+### `r3f-business` — multi-section company site
+
+Full structure for company / agency / studio sites: nav + hero + 6-service
+grid + pinned-scroll project showcase + working contact form + 4-column footer.
+Includes JSON-LD LocalBusiness schema, Open Graph, sitemap, robots.txt,
+reduced-motion CSS, mobile menu.
+
+```
+templates/r3f-business/
+├── src/components/{Nav,Hero,Scene,Services,ProjectShowcase,ContactForm,Footer}.tsx
+├── src/{App,main,index.css}
+├── public/{robots.txt,sitemap.xml}
+├── .env.example  (Formspree endpoint)
+└── ... (configs as above + lucide-react)
+```
+
 ## Workflow
+
+### Step 0 — (optional) Recon a target URL
+
+If you're rebranding or matching an existing site:
+
+```bash
+bash skills/3d-builder/scripts/recon.sh <url> ./recon-output
+```
+
+Produces `colors-top.txt`, `copy.md`, `images/`, `logo-candidates.txt`,
+`recon.json`. The `/3d-recon` slash command wraps this and adds smart
+post-processing (e.g. ignore neutrals when picking brand palette).
 
 ### Step 1 — Scaffold
 
-Run the scaffold script to copy the bundled R3F template:
-
 ```bash
-bash "$CLAUDE_DIR/skills/3d-builder/scripts/scaffold.sh" <target-dir> <project-name>
+bash skills/3d-builder/scripts/scaffold.sh <target-dir> <project-name> [vite|business]
 ```
 
-Where `$CLAUDE_DIR` resolves to `~/.claude` (user-level) or the repo path.
-If `$CLAUDE_DIR` is unset, infer it from the SKILL.md location:
-`SKILL_DIR="$(dirname "$0")"` then `scripts/scaffold.sh`.
-
-The template lives at `templates/r3f-vite/` and contains:
-
-- `package.json`, `vite.config.ts`, `tsconfig.json`
-- `tailwind.config.js`, `postcss.config.js`
-- `src/main.tsx`, `src/App.tsx`, `src/index.css`
-- `src/components/Scene.tsx` — R3F canvas with rotating object + Float + Environment
-- `src/components/Hero.tsx` — Hero with GSAP entrance animation
-- `src/components/Features.tsx` — Scroll-triggered card grid
-- `src/components/Contact.tsx` — CTA section
+Default template is `vite`. Use `business` for company/agency sites.
 
 ### Step 2 — Customize content
 
-The template uses `__PLACEHOLDER__` tokens. Replace them based on the user's brief:
+Replace `__PLACEHOLDER__` tokens. Both templates share these tokens; `business`
+adds more.
+
+**Shared (both templates)**
 
 | Token | What to put |
 |-------|-------------|
 | `__PROJECT_NAME__` | npm package name (kebab-case) |
-| `__TITLE__` | Browser tab title |
-| `__DESCRIPTION__` | SEO meta description |
-| `__HERO_TITLE__` | Big H1 |
-| `__HERO_SUBTITLE__` | Subhead under hero |
-| `__FEATURES_HEADING__` | Section title |
-| `__FEATURE_{1,2,3}_TITLE__` / `__FEATURE_{1,2,3}_BODY__` | 3 feature cards |
-| `__CONTACT_HEADING__` / `__CONTACT_SUBTITLE__` / `__CONTACT_CTA__` | Contact CTA |
-| `__BRAND_50__` / `__BRAND_500__` / `__BRAND_900__` | Tailwind brand palette (hex w/o #) |
+| `__TITLE__` / `__DESCRIPTION__` | Browser tab + meta |
+| `__BRAND_50__` … `__BRAND_900__` | Tailwind brand palette (hex w/o `#`) |
+| `__BRAND_500__` (in `Scene.tsx`, `index.css`) | Primary mesh color |
+| `__HERO_TITLE__` / `__HERO_SUBTITLE__` | Hero copy |
 
-Use Edit (preferred) or `sed -i` to replace. Pick a color palette that matches the theme — warm amber for coffee, deep blue for tech, forest green for outdoors, etc.
+**`r3f-vite` only**
+
+| Token | What |
+|-------|------|
+| `__FEATURES_HEADING__` | Features section heading |
+| `__FEATURE_{1,2,3}_TITLE__` / `__FEATURE_{1,2,3}_BODY__` | 3 cards |
+| `__CONTACT_HEADING__` / `__CONTACT_SUBTITLE__` / `__CONTACT_CTA__` | CTA section |
+
+**`r3f-business` only**
+
+| Token category | Tokens |
+|----|----|
+| Lang/SEO | `__LANG__`, `__OG_TITLE__`, `__OG_DESCRIPTION__`, `__OG_URL__`, `__OG_LOCALE__`, `__THEME_COLOR__` |
+| Brand identity | `__BRAND_NAME__`, `__BRAND_100__`, `__BRAND_400__`, `__BRAND_600__` (full 6-step scale) |
+| Fonts | `__FONT_DISPLAY__`, `__FONT_SANS__` |
+| Nav | `__NAV_SERVICES__`, `__NAV_PROJECTS__`, `__NAV_CONTACT__`, `__NAV_CTA__` |
+| Hero | `__HERO_KICKER__`, `__HERO_CTA_PRIMARY__`, `__HERO_CTA_SECONDARY__` |
+| Services | `__SERVICES_KICKER__`, `__SERVICES_HEADING__`, `__SERVICES_SUBTITLE__`, 6× `__SERVICE_N_TITLE__`/`_BODY__` |
+| Project | `__PROJECT_KICKER__`, `__PROJECT_TITLE__`, `__PROJECT_BODY__`, 3× `__STAT_N_LABEL__`/`_VALUE__`, 4× `__PROJECT_IMG_N_ALT__` |
+| Contact form | `__CONTACT_KICKER__`, `__FORM_NAME_LABEL__`, `__FORM_EMAIL_LABEL__`, `__FORM_PHONE_LABEL__`, `__FORM_MESSAGE_LABEL__`, `__FORM_GDPR_LABEL__`, `__FORM_SUBMIT__`, `__FORM_SENDING__`, `__FORM_SUCCESS__`, `__FORM_ERROR__` |
+| Footer | `__FOOTER_TAGLINE__`, `__FOOTER_COL{1,2,3}_TITLE__`, `__FOOTER_LINK_{1,2,3}__`, `__FOOTER_LEGAL_{1,2,3}__`, `__FOOTER_ADDRESS__`, `__FOOTER_EMAIL__`, `__FOOTER_PHONE__`, `__FOOTER_YEAR__`, `__FOOTER_RIGHTS__` |
+| JSON-LD address | `__ADDRESS_STREET__`, `__ADDRESS_CITY__`, `__ADDRESS_ZIP__`, `__ADDRESS_COUNTRY__` |
+
+To find every remaining token quickly:
+```bash
+grep -rn "__[A-Z0-9_]\+__" src/ index.html tailwind.config.js public/
+```
+
+Use the Edit tool to replace tokens (preferred), or `sed -i` for bulk swaps.
 
 ### Step 3 — Add a 3D model (optional but recommended)
 
@@ -102,6 +159,38 @@ bash scripts/deploy-vercel.sh <project-dir>
 
 Uses Vercel CLI. First run prompts for login; subsequent runs are zero-touch.
 Alternative: push to GitHub and import via vercel.com (easier first time).
+
+### Step 7 — Lighthouse audit (optional)
+
+```bash
+bash scripts/lighthouse.sh http://localhost:5173 ./lighthouse-report
+# or against the live URL after deploy:
+bash scripts/lighthouse.sh https://<slug>.vercel.app
+```
+
+Prints Performance / Accessibility / Best-practices / SEO scores and writes
+a full HTML report.
+
+## Form backend (`r3f-business` only)
+
+The `ContactForm.tsx` posts to `import.meta.env.VITE_FORMSPREE_ENDPOINT`.
+Free signup at https://formspree.io → New form → copy endpoint.
+
+```bash
+cp .env.example .env.local
+# edit VITE_FORMSPREE_ENDPOINT=https://formspree.io/f/...
+```
+
+Vercel free tier supports env vars in the dashboard or `vercel env add`.
+
+## Asset pipeline (recap)
+
+| Step | Command |
+|------|---------|
+| Fetch CC0 model | `bash scripts/fetch-cc0-model.sh <url> ./public/model.glb` |
+| Fetch HDRI | `bash scripts/fetch-hdri.sh <slug> 1k ./public/env.hdr` |
+| Optimize GLB (draco + WebP textures) | `bash scripts/optimize-glb.sh public/model.glb` |
+| Generate typed React component | `npx gltfjsx public/model.glb -o src/components/Model.tsx -t` |
 
 ## Performance budget
 

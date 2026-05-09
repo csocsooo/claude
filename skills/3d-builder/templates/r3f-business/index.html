@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="__LANG__">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#__THEME_COLOR__" />
+    <meta name="description" content="__DESCRIPTION__" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="__OG_TITLE__" />
+    <meta property="og:description" content="__OG_DESCRIPTION__" />
+    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:url" content="__OG_URL__" />
+    <meta property="og:locale" content="__OG_LOCALE__" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="__OG_TITLE__" />
+    <meta name="twitter:description" content="__OG_DESCRIPTION__" />
+    <meta name="twitter:image" content="/og-image.jpg" />
+
+    <!-- JSON-LD LocalBusiness schema (Claude: fill with real data) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "__BRAND_NAME__",
+        "description": "__DESCRIPTION__",
+        "url": "__OG_URL__",
+        "telephone": "__FOOTER_PHONE__",
+        "email": "__FOOTER_EMAIL__",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "__ADDRESS_STREET__",
+          "addressLocality": "__ADDRESS_CITY__",
+          "postalCode": "__ADDRESS_ZIP__",
+          "addressCountry": "__ADDRESS_COUNTRY__"
+        }
+      }
+    </script>
+
+    <title>__TITLE__</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
