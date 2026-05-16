@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
-"""AURA Romania 30-day TikTok tracker — 10 video/day variant.
+"""AURA Romania 30-day TikTok tracker — Gary Vee 2026 atomization model.
 
-Start: Monday 2026-05-18.
-Daily 10 slots: 07:00, 08:30, 10:00, 11:30, 13:00, 14:30, 16:00, 18:00, 20:00, 21:30.
-Pillar cadence per day: P1×3 (hír) + P2×2 (edu) + P3×2 (POV) + P4×1 (trend) + P5×1 (scam) + P6×1 (Q&A) = 10.
+Daily structure: 7 content units → 16 post instances (cross-post).
+- 3× video pillar clips (TikTok + IG Reels + YT Shorts + FB Reels = 4 posts each) = 12
+- 2× Snapchat raw POV = 2
+- 1× LinkedIn text quote = 1
+- 1× X clip + thread = 1
+Total: 16 posts/day across 7 platforms (Gary Vee 2026 ajánlás).
+
+Production:
+- Heti 1 pillar shoot (Sunday 13:00-16:00) → 14 video clips/hét
+- Napi 1 fresh P1 news shoot (06:30, ~10 min)
+- Snapchat raw napközben, in-the-moment
+- LinkedIn + X szövegek vasárnap előírva 7-7 db.
 """
 import csv
 from datetime import date, timedelta
@@ -11,340 +20,290 @@ from datetime import date, timedelta
 START = date(2026, 5, 18)  # Monday
 WEEKDAY_HU = ["H", "K", "Sze", "Cs", "P", "Szo", "V"]
 
-PILLAR_NAMES = {
-    "P1": "Crypto hír",
-    "P2": "Edukáció",
-    "P3": "Relatable/POV",
-    "P4": "Trend hijack",
-    "P5": "Scam warning",
-    "P6": "Community/Q&A",
+# 7 daily content units (= 16 post instances after cross-post)
+UNITS = [
+    # (unit_code, time, type_label, platforms, default_pre_record)
+    ("U1", "07:00", "VID-AM",   "TikTok + IG Reels + YT Shorts + FB Reels", "Nem"),
+    ("U2", "09:00", "SNAP-AM",  "Snapchat Spotlight",                       "Nem"),
+    ("U3", "11:00", "LI-TXT",   "LinkedIn",                                  "Igen"),
+    ("U4", "13:00", "VID-PM",   "TikTok + IG Reels + YT Shorts + FB Reels", "Igen"),
+    ("U5", "16:00", "SNAP-PM",  "Snapchat Spotlight",                       "Nem"),
+    ("U6", "18:00", "X-CLIP",   "X (Twitter)",                               "Igen"),
+    ("U7", "20:00", "VID-EVE",  "TikTok + IG Reels + YT Shorts + FB Reels", "Igen"),
+]
+
+# ---------------- Content libraries ----------------
+
+# VID-AM (30, P1 news with weekday flavor)
+VID_AM_BY_WEEKDAY = {
+    0: ("P1", "Hétfői hír-dump — weekend recap", "Weekend recap: 3 lucruri care s-au mișcat în crypto."),
+    1: ("P1", "Aznapi top hír", "Știrea zilei din crypto — 30 de secunde."),
+    2: ("P1", "Wednesday BNR / EU regulation", "Ce a zis regulatorul azi — pe înțelesul tău."),
+    3: ("P1", "Heti félidős market check", "La jumătatea săptămânii: cine câștigă, cine pierde."),
+    4: ("P1", "Friday news dump — 5 hír", "5 lucruri din crypto, în 60 de secunde."),
+    5: ("P1", "Weekend market wrap", "Weekend recap + 1 alt-coin de urmărit."),
+    6: ("P1", "Heti előrejelzés — 3 esemény", "3 lucruri de urmărit săptămâna care vine."),
 }
-HASHTAGS = {
-    "P1": "#fyp #romania #cryptoromania #bitcoinromania #auraromania",
-    "P2": "#educatiefinanciara #cryptoromania #fyp #romania #auraromania",
-    "P3": "#pov #romania #relatable #fyp #cryptoromania",
-    "P4": "#fyp #romania #cryptoromania #trending #auraromania",
-    "P5": "#scamalert #cryptoromania #fyp #romania #protectie",
-    "P6": "#qa #cryptoromania #fyp #romania #auraromania",
-}
 
-SLOTS = [
-    # (slot_label, time, pillar)
-    ("S1",  "07:00", "P1"),  # morning news
-    ("S2",  "08:30", "P2"),  # quick tip
-    ("S3",  "10:00", "P3"),  # POV morning
-    ("S4",  "11:30", "P1"),  # midday market
-    ("S5",  "13:00", "P2"),  # deep edu / Crypto 101
-    ("S6",  "14:30", "P4"),  # trend
-    ("S7",  "16:00", "P5"),  # scam warning
-    ("S8",  "18:00", "P3"),  # POV evening
-    ("S9",  "20:00", "P1"),  # evening wrap
-    ("S10", "21:30", "P6"),  # community
+# VID-PM (30, P2 edu + P5 scam + P6 prompt mix) — pillar clips
+VID_PM_TOPICS = [
+    ("P2", "Crypto 101 Ep.1 — blockchain mama nyelvén", "Crypto 101 Ep.1: blockchain pe înțelesul mamei."),
+    ("P2", "Crypto 101 Ep.2 — exchange + AURA", "Ce e un exchange și prin ce diferă AURA."),
+    ("P2", "Crypto 101 Ep.3 — self-custody", "Self-custody — și de ce contează."),
+    ("P2", "Crypto 101 Ep.4 — KYC magyarázva", "KYC — de ce dai poza cu buletinul (te protejează)."),
+    ("P2", "Crypto 101 Ep.5 — gas fees", "Gas fees explicate cu autostrada."),
+    ("P5", "Pig butchering scam RO", "De ce românii sunt ținta «porc la tăiere»."),
+    ("P2", "3 piros zászló kezdőknek", "Dacă auzi una din astea 3 — FUGI."),
+    ("P5", "Fake AURA / fake support DM", "NOI NU vă scriem niciodată primii pe DM."),
+    ("P2", "BTC vs ETH 45 mp", "Diferența între BTC și ETH, fără jargon."),
+    ("P5", "Telegram VIP signal scam", "«Grup VIP» și signal — cum recunoști capcana."),
+    ("P2", "Crypto adózás RO 2026", "Cum se plătește impozitul pe crypto în România."),
+    ("P5", "Rug pull RO/CEE eset", "Un rug pull real — cum a funcționat."),
+    ("P2", "Wallet bunica portofeljével", "Ce e un wallet — explicat cu portofelul de la bunica."),
+    ("P2", "Crypto 101 Ep.6 — DeFi simply", "DeFi în 60 de secunde — fără hype."),
+    ("P5", "Fake AURA app Play Store", "Aplicația falsă AURA — cum o recunoști."),
+    ("P2", "Crypto 101 Ep.7 — stablecoins", "Stablecoin — și de ce contează pentru români."),
+    ("P5", "Romance scam + crypto", "Romance scam + crypto — cum funcționează."),
+    ("P2", "Crypto 101 Ep.8 — NFT debunk", "NFT — ce e real și ce a fost hype."),
+    ("P5", "Recovery scam", "Recovery scam — al doilea atac după primul."),
+    ("P2", "Stablecoin diaszpórának", "Diaspora HOW-TO: trimite bani acasă cu stablecoin."),
+    ("P5", "Phishing email exchange", "Email de la «exchange» — cum vezi că e phishing."),
+    ("P2", "Crypto 101 Ep.9 — DAO basics", "Ce e un DAO și de ce s-ar putea să-ți pese."),
+    ("P5", "Fake giveaway (Elon style)", "«Trimite 1 ETH, primești 2» — niciodată."),
+    ("P2", "Crypto 101 Ep.10 — EU MiCA", "EU MiCA — ce înseamnă pentru tine în 2026."),
+    ("P2", "Hogyan olvass BTC chartot 60 mp", "Cum citesc un grafic — fără TA jóslás."),
+    ("P5", "Ponzi scheme — Bitconnect 2.0", "Bitconnect 2.0 — semnele unei scheme Ponzi."),
+    ("P2", "DCA vs lump sum", "DCA vs lump sum — care a funcționat în 5 ani."),
+    ("P5", "SIM swap + 2FA SMS", "SIM swap — de ce 2FA SMS nu e suficient."),
+    ("P2", "5 pontos checklist — safe exchange", "Cum verifici dacă un exchange e safe."),
+    ("P2", "Top 3 lecții din 30 zile", "Top 3 lecții din prima lună pe AURA."),
 ]
 
-# --- P1 hír (90 db = 3/nap) — weekday flavored templates ---
-# Each day's 3 P1 slots, varied by weekday for slot 1 (07:00).
-WEEKDAY_MORNING_NEWS = {
-    0: ("Hétfői hír-dump — ce a făcut crypto în weekend", "Weekend recap: 3 lucruri care s-au mișcat."),
-    1: ("Aznapi top hír", "Știrea zilei din crypto — 30 de secunde."),
-    2: ("Wednesday hír — BNR / EU regulation focus", "Ce a zis regulatorul azi — pe înțelesul tău."),
-    3: ("Heti félidős market check", "La jumătatea săptămânii: cine câștigă, cine pierde."),
-    4: ("Friday news dump — 5 hír", "5 lucruri din crypto, în 60 de secunde."),
-    5: ("Weekend market wrap", "Weekend recap + 1 alt-coin de urmărit."),
-    6: ("Heti előrejelzés — 3 esemény", "3 lucruri de urmărit săptămâna care vine."),
-}
-MIDDAY_MARKET = ("Aznapi piaci frissítés", "Update: BTC, ETH, top mover-ul zilei — 30 sec.")
-EVENING_WRAP = ("Esti wrap — ce a contat azi", "Esti recap: ce trebuie să știi înainte să dormi.")
-
-# --- P2 edukáció (60 db = 2/nap) ---
-P2_TOPICS = [
-    ("3 piros zászló kezdőknek", "Dacă auzi una din astea 3 — FUGI.", "Salvează + trimite părinților"),
-    ("BTC vs ETH 45 mp", "Diferența între Bitcoin și Ethereum, fără jargon.", "Save"),
-    ("Crypto adózás Romániában 2026", "Cum se plătește impozitul pe crypto în România.", "Save + întreabă contabilul"),
-    ("Crypto 101 Ep.1 — blockchain mama nyelvén", "Crypto 101 Ep.1: ce e blockchain-ul, pe înțelesul mamei.", "Save (Ep.2 urmează)"),
-    ("Crypto 101 Ep.2 — exchange + AURA", "Ce e un exchange și prin ce diferă AURA.", "Save"),
-    ("Crypto 101 Ep.3 — self-custody + hardware wallet", "Ce înseamnă self-custody și de ce contează.", "Save"),
-    ("Crypto 101 Ep.4 — KYC miért véd téged", "KYC — de ce dai poza cu buletinul (și de ce te protejează).", "Save"),
-    ("Crypto 101 Ep.5 — gas fees autostradával", "Gas fees explicate cu autostrada.", "Save"),
-    ("Crypto 101 Ep.6 — DeFi simply", "DeFi în 60 de secunde — fără hype.", "Save"),
-    ("Crypto 101 Ep.7 — stablecoins", "Ce e un stablecoin și de ce contează pentru români.", "Save"),
-    ("Crypto 101 Ep.8 — NFT debunk", "NFT — ce e real și ce a fost hype.", "Save"),
-    ("Crypto 101 Ep.9 — DAO basics", "Ce e un DAO și de ce s-ar putea să-ți pese.", "Save"),
-    ("Crypto 101 Ep.10 — EU MiCA", "EU MiCA — ce înseamnă pentru tine în 2026.", "Save"),
-    ("Wallet bunica portofeljével", "Ce e un wallet — explicat cu portofelul de la bunica.", "Save"),
-    ("Stablecoin diaszpórának — remittance", "Românii din străinătate — de ce stablecoin?", "Save + share cu cei plecați"),
-    ("3 könyv egy barátnak pénzről + crypto", "3 cărți pentru un prieten care vrea să înțeleagă banii.", "Save"),
-    ("Hogyan olvass BTC chartot 60 mp", "Cum citesc un grafic de Bitcoin — fără TA jóslás.", "Save"),
-    ("DCA vs lump sum — adat", "DCA vs lump sum: care a funcționat în ultimii 5 ani.", "Save"),
-    ("Hogyan szervezem a portfóliómat", "Cum îmi organizez portofelul — fără să zic cât am.", "Save"),
-    ("50%/hó hozam debunk — matek", "De ce nu îți zice nimeni adevărul despre 50%/lună.", "Save"),
-    ("5 pontos checklist — safe exchange", "Cum verifici dacă un exchange e safe — 5 puncte.", "Save"),
-    ("#1 kezdő hiba — saját tapasztalat", "Greșeala #1 a începătorilor — și am făcut-o și eu.", "Comment cu a ta"),
-    ("Hogyan magyaráznám gyermeknek mi a BTC", "Cum i-aș explica copilului meu ce e Bitcoin.", "Share părinți"),
-    ("Top 3 lecții din 30 zile", "Top 3 lecții din prima lună pe AURA TikTok.", "Save"),
-    ("Hot vs cold wallet", "Hot vs cold wallet — când folosești care.", "Save"),
-    ("2FA — nem opcionális", "2FA — singurul lucru între tine și un hack.", "Save"),
-    ("Seed phrase storage — 5 módszer", "5 moduri în care să-ți păstrezi seed phrase-ul.", "Save"),
-    ("Mi az AMM (automated market maker)", "AMM în 45 de secunde — fără jargon.", "Save"),
-    ("Liquidity pool magyarázva", "Ce e un liquidity pool — și de ce poți pierde bani.", "Save"),
-    ("Yield farming kockázatok", "Yield farming — 3 riscuri pe care nu ți le zice nimeni.", "Save"),
-    ("Impermanent loss példa", "Impermanent loss — explicat cu un exemplu real.", "Save"),
-    ("Bridge-ek és kockázatuk", "Cross-chain bridges — și de ce sunt hack-uite.", "Save"),
-    ("L1 vs L2 — Ethereum scaling", "L1 vs L2 — diferența în 60 de secunde.", "Save"),
-    ("Mempool — mi az", "Ce e mempool-ul — și de ce contează pentru gas.", "Save"),
-    ("Halving — mi és miért érdekes", "Bitcoin halving — ce e și de ce piața se mișcă.", "Save"),
-    ("PoW vs PoS — konszenzus", "Proof of Work vs Proof of Stake — fără jargon.", "Save"),
-    ("Validator vs node", "Validator vs node — diferența pentru începători.", "Save"),
-    ("Slashing — mit kockáztat a staker", "Ce înseamnă slashing dacă faci staking.", "Save"),
-    ("Gas optimization tippek", "5 trucuri să plătești mai puțin gas.", "Save"),
-    ("Tokenomics olvasása — 5 pont", "Cum citești tokenomics-ul unui proiect în 60 sec.", "Save"),
-    ("Whitepaper read tippek", "Cum citești un whitepaper fără să-ți pierzi vremea.", "Save"),
-    ("On-chain analytics alapok", "On-chain analytics — ce să te uiți pentru BTC.", "Save"),
-    ("Whale watching — mit nézel", "Whale watching — cum urmărești banii mari.", "Save"),
-    ("Fear & Greed Index", "Fear & Greed Index — și cum nu-l folosesc lume.", "Save"),
-    ("RSI alapok 30 mp", "RSI — indicatorul tehnic în 30 de secunde.", "Save"),
-    ("MACD alapok", "MACD — și de ce începătorii îl folosesc greșit.", "Save"),
-    ("Trendline rajzolás", "Cum desenezi un trendline care chiar funcționează.", "Save"),
-    ("Support és resistance", "Support și resistance — în 60 de secunde.", "Save"),
-    ("Volume olvasás", "Volume — de ce e mai important decât prețul.", "Save"),
-    ("Halving cycle theory", "Bitcoin halving cycle — teoria în 60 de secunde.", "Save"),
-    ("ETF flow — mit néz", "ETF flow — cum afli cine cumpără BTC.", "Save"),
-    ("Korreláció: BTC vs S&P 500", "BTC vs bursa americană — corelația explicată.", "Save"),
-    ("Inflation hedge teória — BTC vs gold", "BTC ca aur digital — teoria și realitatea.", "Save"),
-    ("Macro: Fed rate cuts impact", "Fed cuts rate — ce se întâmplă cu BTC?", "Save"),
-    ("Position sizing 1% rule", "Position sizing — regula 1% care îți salvează contul.", "Save"),
-    ("Stop loss vs DCA", "Stop loss vs DCA — strategii diferite, când pe care.", "Save"),
-    ("Tax loss harvesting RO 2026", "Tax loss harvesting — cum scazi impozitul legal.", "Save"),
-    ("RON-crypto local payments", "Plăți crypto în România — 2026 update.", "Save"),
-    ("Cum trimit bani din străinătate cu crypto", "Diaspora HOW-TO: trimite bani acasă cu stablecoin.", "Save + share"),
-    ("Recovery seed phrase fogalom", "Ce e seed phrase-ul de recuperare — și unde îl NUUUU pui.", "Save"),
+# VID-EVE (30, P3 POV + P4 trend + P6 community)
+VID_EVE_TOPICS = [
+    ("P3", "POV: szülőknek bitcoint vettem", "POV: tocmai ai zis părinților că ai cumpărat BTC."),
+    ("P3", "POV: te vagy az aki érti seed phrase", "POV: ești singurul din grup care înțelege seed phrase."),
+    ("P3", "POV: 100 RON-od van, először crypto", "POV: ai 100 RON și vrei prima oară crypto."),
+    ("P3", "3 dolog amit 18 évesen hittem", "3 lucruri pe care le-am crezut la 18 ani — false."),
+    ("P4", "POV: crypto la masă duminică", "Când cineva îmi explică crypto la masă de duminică."),
+    ("P3", "Generációs reakciók (bunica/frate/șef)", "Reacții generaționale la «Bitcoin»."),
+    ("P3", "Crypto Twitter karakterek (4 típus)", "Tipuri de oameni în crypto Twitter — pe toate le joc."),
+    ("P6", "Q&A sticker — kezdő kérdések", "Lăsați-mi întrebări — răspund mâine."),
+    ("P3", "POV: birou crypto — meeting", "POV: stai în meeting, dar verifici BTC pe sub masă."),
+    ("P3", "Reacția când prietenul zice 50%/lună", "Reacția mea când îmi zice cineva 50% pe lună."),
+    ("P3", "POV: te magyarázod a grátar-on", "POV: ești ăla care explică crypto la grătar."),
+    ("P4", "POV: tipuri de prieteni «crypto»", "Tipuri de prieteni când le zici că ești în crypto."),
+    ("P3", "POV: la nuntă unchiul kérdez BTC", "POV: la nuntă, unchiul te întreabă de Bitcoin."),
+    ("P3", "End-of-month vibe POV (31)", "Pe 31, când vezi cât ai cheltuit pe «doar un coin»."),
+    ("P6", "Comment coinul tău (prompt)", "Comentează coinul tău — mâine îți zic 1 lucru factual."),
+    ("P3", "Apu pénzügyi mondatai amit most értek", "Lucruri pe care le zicea tata — abia acum înțeleg."),
+    ("P3", "Eu vs eu 2 évvel ezelőtt", "Eu vs eu de acum 2 ani în crypto."),
+    ("P3", "POV: barátod aki mindent eladott mélypontnál", "POV: prietenul tău care a vândut totul la fund."),
+    ("P3", "Tipuri de oameni la o petrecere crypto", "Tipuri de oameni la o petrecere de crypto."),
+    ("P4", "POV: expert vs începător stil diferit", "POV: cum vorbește un expert vs un începător."),
+    ("P3", "Reactia bunicii la wallet", "Reacția bunicii când îi explic wallet digital."),
+    ("P3", "POV: copilul te întreabă unde sunt banii", "POV: copilul te întreabă «unde sunt banii?»."),
+    ("P6", "Q&A AURA — kérdezzetek bármit", "Întrebați-mă orice despre AURA — răspund mâine."),
+    ("P3", "Reactia mea la «doar 100 lei»", "Reacția mea la «doar 100 lei, ce ai de pierdut?»."),
+    ("P4", "POV: la grătar, întrebare crypto", "POV: la grătar, cineva întreabă «ce e Bitcoin?»."),
+    ("P3", "POV: prima oară te-a întrebat ANAF", "POV: prima oară te-a întrebat ANAF de crypto."),
+    ("P6", "Community poll — mit a következő 30 napban", "30 zile recap — ce vreți să fac în următoarele 30?"),
+    ("P3", "Tipuri de comentarii sub crypto video", "Tipuri de comentarii sub orice video de crypto."),
+    ("P4", "Highlight reel — top momentele lunii", "Top momentele primei luni pe AURA."),
+    ("P3", "Final community thank you POV", "Mulțumesc pentru 30 de zile — voi sunteți AURA."),
 ]
 
-# --- P3 POV/relatable (60 db = 2/nap) ---
-P3_TOPICS = [
-    ("POV: szóltam szülőknek bitcointot vettem", "POV: tocmai ai zis părinților că ai cumpărat Bitcoin.", "Tag pe cineva care a pățit-o"),
-    ("POV: te vagy az egyetlen aki érti seed phrase", "POV: ești singurul din grup care înțelege ce e un seed phrase.", "Comment dacă tu"),
-    ("3 dolog amit 18 évesen hittem (false)", "3 lucruri pe care le-am crezut la 18 ani — și care erau false.", "Comment a ta"),
-    ("POV: 100 RON-od van, először crypto", "POV: ai 100 RON și vrei să intri în crypto pentru prima oară.", "Comment dacă te-ai văzut"),
-    ("Dolgok amit irodában csinálsz crypto-sként", "Lucruri pe care le faci la birou când ești în crypto.", "Tag colegul"),
-    ("Crypto Twitter karakterek (4 típus)", "Tipuri de oameni în crypto Twitter — pe toate le joc eu.", "Comment care ești tu"),
-    ("Generációs reakciók — bunica/frate/șef", "Cum reacționează generațiile când zici «Bitcoin».", "Comment generația ta"),
-    ("End-of-month vibe POV", "Pe 31, când vezi cât ai cheltuit pe «doar un coin».", "Like dacă tu"),
-    ("Pénzügyi tanulságok szülőktől → gyerekeknek", "Lucruri învățate de la părinți — și ce schimb pentru copiii mei.", "Comment"),
-    ("Tipuri de prieteni când le zici că ești crypto", "Tipuri de prieteni când le zici că ești în crypto.", "Tag prietenul"),
-    ("POV: barátod aki mindent eladott a mélypontnál", "POV: prietenul tău care a vândut totul la fund.", "Tag prietenul"),
-    ("Eu vs eu 2 évvel ezelőtt", "Eu vs eu de acum 2 ani în crypto.", "Comment"),
-    ("Apu pénzügyi mondatai amit most értek", "Lucruri pe care le zicea tata și abia acum le înțeleg.", "Comment"),
-    ("Reacția când prietenul zice 50%/lună", "Reacția mea când îmi zice cineva că face 50% pe lună.", "Tag prietenul"),
-    ("POV: te magyarázod a grátar-on", "POV: ești ăla care explică crypto la grătar.", "Tag prietenul"),
-    ("POV: la nuntă unchiul kérdez BTC-ről", "POV: ești la nuntă și unchiul te întreabă de Bitcoin.", "Tag pe cineva"),
-    ("POV: dr. de pe TikTok te diagnosztikál mint crypto bro", "POV: tipul de pe TikTok te diagnostichează ca «crypto bro».", "Like"),
-    ("Reactia mea când văd un nou meme coin", "Reacția mea când văd un nou meme coin în trending.", "Comment"),
-    ("POV: prietenul te invită la «oportunitate»", "POV: prietenul te invită la «o oportunitate unică».", "Tag prietenul"),
-    ("Tipuri de oameni la o petrecere crypto", "Tipuri de oameni la o petrecere de crypto.", "Comment"),
-    ("POV: la salon, doamna kérdez BTC-ről", "POV: la salon, doamna care te tunde te întreabă de Bitcoin.", "Like"),
-    ("Crypto kid vs bani din job", "Eu cu bani din crypto vs eu cu bani din job.", "Comment"),
-    ("POV: la pensia mătuașei spui ce csinálsz munkán", "POV: la masă, spui ce faci la muncă — și e crypto.", "Like"),
-    ("Reactia bunicii la wallet", "Reacția bunicii când îi explic ce e un «wallet digital».", "Like"),
-    ("POV: research = TikTok 30 sec", "POV: prietenul tău a făcut «research» = 30 sec pe TikTok.", "Tag prietenul"),
-    ("Tipuri de copii la 8 ani când le explici banii", "Cum reacționează copiii când le explici banii.", "Comment"),
-    ("POV: la Lidl, plătești cu crypto?", "POV: prietenul a uitat banii la Lidl — plătești cu crypto?", "Like"),
-    ("POV: șeful te invită la «side hustle»", "POV: șeful te invită la «un side hustle simplu».", "Tag colegul"),
-    ("Reactia mea când văd «guaranteed 30%»", "Reacția mea când văd «randament garantat 30%».", "Like dacă tu"),
-    ("POV: cina romantică, spui ești în crypto", "POV: la cina romantică, spui că ești în crypto.", "Tag pe cineva"),
-    ("Tipuri de oameni pe Telegram crypto", "Tipuri de oameni dintr-un grup de Telegram crypto.", "Comment"),
-    ("POV: festival, prietenul a pierdut seed", "POV: la festival, prietenul a pierdut seed phrase-ul.", "Like"),
-    ("Eu pe TikTok vs eu în viața reală", "Eu pe TikTok vs eu în viața reală cu crypto.", "Comment"),
-    ("Tipi care vorbesc despre crypto la sală", "Tipi care vorbesc despre crypto între seturi la sală.", "Tag colegul"),
-    ("Reacția când te întreabă «ce coin?»", "Reacția mea când mă întreabă cineva «ce coin?».", "Comment"),
-    ("POV: în autobuz, doi seniori vorbesc despre BTC", "POV: în autobuz, doi seniori discută despre Bitcoin.", "Like"),
-    ("Crypto teamomi — work from home cu crypto", "Crypto teamomi — mămici work from home în crypto.", "Comment"),
-    ("POV: la party, prietenul beat explică DeFi", "POV: prietenul beat la party încearcă să explice DeFi.", "Tag prietenul"),
-    ("Tipuri de șefi la «crypto research zi liberă»", "Tipuri de șefi când ceri o zi liberă pentru «crypto research».", "Comment"),
-    ("POV: în concediu, dar checking portfolio", "POV: ești în concediu, dar tot la portofoliu te uiți.", "Like"),
-    ("Reacția mea la «tu ce ai cumpărat?»", "Reacția mea când mă întreabă «tu ce ai cumpărat?».", "Like"),
-    ("POV: când vine factura curentului", "POV: când vine factura și ai cumpărat un alt coin săptămâna trecută.", "Comment"),
-    ("Tipuri de oameni dimineața după roșu", "Tipuri de oameni dimineața când piața e roșie.", "Comment"),
-    ("POV: copilul te întreabă unde sunt banii", "POV: copilul te întreabă «unde sunt banii?».", "Like"),
-    ("Eu cu profit vs Eu cu pierdere", "Eu cu zile de profit vs eu cu zile de pierdere.", "Comment"),
-    ("POV: la salon, doamna zice de pump", "POV: la salon, doamna care îți face unghii zice de un pump.", "Like"),
-    ("Tipuri de creatori despre crypto", "Tipuri de creatori care vorbesc despre crypto.", "Comment"),
-    ("POV: la psiholog explici de ce ești obosit", "POV: la psiholog, explici de ce ești obosit — și e portfolio.", "Like"),
-    ("Reacția când prietenul rămâne pe BTC vs alt", "Reacția mea când prietenul rămâne pe BTC vs cel cu alt-coins.", "Comment"),
-    ("POV: la doctor, verifici prețul în waiting room", "POV: la doctor, dar tu verifici BTC în waiting room.", "Like"),
-    ("Tipuri de comentarii sub un video de crypto", "Tipuri de comentarii sub orice video de crypto.", "Comment"),
-    ("POV: prima oară când te-a întrebat ANAF", "POV: prima oară când te-a întrebat ANAF de crypto.", "Like"),
-    ("Reacția când prietenul «împrumută» pentru a investi", "Reacția când prietenul împrumută bani să investească în crypto.", "Tag prietenul"),
-    ("POV: în vacanță la mare, piața crashează", "POV: ești la mare, dar piața crashează.", "Like"),
-    ("Tipuri de soțîi cu soți crypto", "Tipuri de soții cu soți în crypto.", "Tag pe cineva"),
-    ("POV: «research» = 3 ore TikTok", "POV: spui «mă duc să fac research» = 3 ore pe TikTok.", "Like"),
-    ("Reacția mea la «doar 100 lei»", "Reacția mea la «doar 100 lei, ce ai de pierdut?».", "Comment"),
-    ("POV: la cumpărături, dar tot la BTC", "POV: la cumpărături, dar tot la BTC te gândești.", "Like"),
-    ("Tipuri de experți pe Twitter", "Tipuri de «experți» pe crypto Twitter.", "Comment"),
-    ("POV: tu ai făcut DD vs amicul cu hype", "POV: tu ai făcut DD vs amicul tău cu hype.", "Tag prietenul"),
+# SNAP-AM / SNAP-PM (60 — raw POV, brief description for planning only)
+SNAP_AM_TOPICS = [
+    ("P3", "Reggeli kávé + premarket check", "Mood crypto matinal."),
+    ("P3", "Útközben — voice memo about an idea", "Idee crypto pe drum la cafenea."),
+    ("P3", "Reading the news headlines", "Reacție live la titluri crypto."),
+    ("P3", "Workspace setup show", "Cum arată desk-ul de creator crypto."),
+    ("P3", "Reading a community comment aloud", "Comment românesc citit cu voce tare."),
+    ("P3", "Quick chart take — TradingView open", "Chart look — 30 sec opinion."),
+    ("P3", "Coffee + book recommendation crypto", "Cartea pe care o citesc azi."),
+    ("P3", "Walking + thinking aloud about RO crypto", "Gând despre crypto România."),
+    ("P3", "Phone tour — apps I use daily", "Aplicațiile mele zilnice (TradingView, AURA, etc.)."),
+    ("P3", "Quick rant — un singur thing about scams", "Rant scurt despre un scam."),
+    ("P3", "Behind-the-scenes — pregătesc videoul", "Behind-the-scenes pillar shoot."),
+    ("P3", "Quick poll — bull or bear today?", "Întrebare rapidă: bull or bear azi?"),
+    ("P3", "Reading article + reacting", "Articol crypto + reacție."),
+    ("P3", "Quick demo — wallet feature", "Demo rapid: o feature wallet."),
+    ("P3", "Family / friend reaction snippet", "Reacția familiei la munca mea."),
+    ("P3", "Coffee shop crypto convo overhead", "Conversație crypto auzită la cafenea."),
+    ("P3", "Reflection: 1 lucru am învățat azi", "Lecția zilei despre crypto."),
+    ("P3", "Quick screen recording — fee compare", "Fee compare AURA vs alt exchange."),
+    ("P3", "Live chart move reaction", "Reacție la o mișcare live de chart."),
+    ("P3", "Question I got DM-ed today", "O întrebare interesantă din DM."),
+    ("P3", "Random thought — money mindset", "Gând despre money mindset."),
+    ("P3", "Mid-shoot break — life update", "Pauză shoot — viața de creator."),
+    ("P3", "Quick book quote + crypto take", "Citat din carte + paralela crypto."),
+    ("P3", "Watching news — live reaction", "TV știri crypto — reacția mea."),
+    ("P3", "Walking home + recap zilei", "Recap zilei pe drum spre casă."),
+    ("P3", "Workout + crypto monologue", "Antrenament + monolog crypto."),
+    ("P3", "Pet appearance (vibe content)", "Pet vibe shot — break from crypto."),
+    ("P3", "Random shop visit + price comp", "Vizita la magazin — prețuri vs inflație."),
+    ("P3", "Sunday prep behind-the-scenes", "Pregătire pentru weekly shoot."),
+    ("P3", "1 quote that defined month", "Citatul lunii."),
 ]
 
-# --- P5 scam (30 db = 1/nap) ---
-P5_TOPICS = [
-    ("Pig butchering scam RO", "De ce românii sunt ținta preferată a «porc la tăiere».", "Share cu părinții"),
-    ("Fake AURA / fake support DM", "NOI NU vă scriem niciodată primii pe DM.", "Screenshot + report"),
-    ("Telegram VIP / signal scam", "«Grup VIP» și «signaluri» — cum recunoști capcana.", "Share"),
-    ("Rug pull RO/CEE eset", "Un rug pull real — cum a funcționat și cum îl recunoști.", "Share"),
-    ("Fake AURA app Play Store", "Aplicația falsă AURA — cum o recunoști.", "Save + share"),
-    ("Romance scam + crypto", "Romance scam + crypto — cum funcționează.", "Share cu prietenele"),
-    ("Fake celebrity endorsement RO", "«Andrei Hossu vinde Bitcoin» — și de ce e mereu fake.", "Report"),
-    ("Recovery scam — după ce ai pierdut", "Recovery scam — al doilea atac, după primul.", "Save"),
-    ("Phishing email exchange", "Email de la «exchange» — cum vezi că e phishing.", "Save"),
-    ("SIM swap atac", "SIM swap — și de ce 2FA SMS nu e suficient.", "Save"),
-    ("Fake giveaway (Elon style)", "«Trimite 1 ETH, primești 2» — niciodată, NICIODATĂ.", "Share"),
-    ("Ponzi scheme — Bitconnect 2.0", "Bitconnect 2.0 — semnele unei scheme Ponzi.", "Save"),
-    ("ICO scam — proiect fals", "ICO scam — cum recunoști un proiect fără viitor.", "Save"),
-    ("Discord moderator impersonation", "«Moderatorul Discord» te scrie — de 99% e scam.", "Save"),
-    ("Address poisoning — clipboard", "Address poisoning — cum un virus îți schimbă adresa la copy-paste.", "Save"),
-    ("Wallet drainer dApp", "Wallet drainer — site fals care îți golește wallet-ul.", "Save"),
-    ("Honeypot token", "Honeypot token — îl cumperi, dar nu poți vinde.", "Save"),
-    ("Fake AirDrop — wallet draindere", "AirDrop fals — conectezi wallet-ul, pierzi tot.", "Save"),
-    ("MLM crypto scheme", "MLM crypto — cum recunoști o piramidă cu «lider».", "Share"),
-    ("Tax refund scam — ANAF impostor", "«ANAF» te sună despre crypto — nu, e scam.", "Save"),
-    ("Fake hardware wallet", "Hardware wallet de pe OLX — cum verifici că nu e modificat.", "Save"),
-    ("Fake P2P trader OTC", "P2P OTC scam — cum recunoști un trader fals.", "Save"),
-    ("Fake escrow service", "Escrow fals — cine «păstrează» banii dispar.", "Save"),
-    ("Smart contract approval scam", "«Approval» nelimitat — și de ce îți drainează wallet.", "Save"),
-    ("Pump and dump Telegram", "Pump and dump pe Telegram — și de ce pierzi mereu.", "Save"),
-    ("Lending platform scam (Celsius)", "Platforme de lending — lecția Celsius.", "Save"),
-    ("Fake job offer — interviewer", "Job interviu crypto — drainere prin task fals.", "Save"),
-    ("Fake investment seminar", "Seminar de investiții cu plată — întotdeauna scam.", "Save"),
-    ("Fake support live chat", "Live chat fals pe site clonă — cum verifici domeniul.", "Save"),
-    ("Public WiFi QR code scam", "QR code în cafenea — cum te poate prinde.", "Save"),
+SNAP_PM_TOPICS = [
+    ("P3", "Reacție post-piață a zilei", "Reacția mea la cum a fost piața azi."),
+    ("P3", "Reading top comments of the day", "Top 3 comentarii ale zilei."),
+    ("P3", "Quick screen rec — feature show", "Quick demo unei funcții."),
+    ("P3", "Random gândire crypto pe drum", "Gând crypto pe drum spre acasă."),
+    ("P3", "Dinner + crypto news on phone", "Cina + verific telefon."),
+    ("P3", "Late afternoon update — pregătesc videoul de seară", "Pregătire video de seară."),
+    ("P3", "Coffee shop convo recap", "Conversație crypto recapitulată."),
+    ("P3", "Watching a competitor video — react", "Reacție la un video competitor."),
+    ("P3", "Trying a new tool — screen record", "Tool nou testat — quick reaction."),
+    ("P3", "Friend Q&A — voice memo", "Întrebare de la prieten."),
+    ("P3", "Random book pickup + page reaction", "Cartea pe care am ridicat-o azi."),
+    ("P3", "Walking + casual market take", "Mers + take casual despre piață."),
+    ("P3", "Cooking + thinking aloud about crypto", "Gătit + monolog crypto."),
+    ("P3", "Quick reaction — un breaking news headline", "Breaking news — reacție rapidă."),
+    ("P3", "End-of-workday wrap thoughts", "Gânduri end-of-day creator."),
+    ("P3", "Recommendation: 1 podcast for tonight", "Podcast recomandat pentru seară."),
+    ("P3", "Live take — un coin în trending", "Take live pe un coin trending."),
+    ("P3", "Behind-the-scenes editing", "Behind-the-scenes vágás."),
+    ("P3", "Pet snap + caption crypto pun", "Pet + crypto pun."),
+    ("P3", "Friend call recap — interesting take", "Conversație telefonică interesantă."),
+    ("P3", "Late commute reflection", "Reflectie pe drum spre casă."),
+    ("P3", "Food shop + price observation", "Cumpărături + observație preț."),
+    ("P3", "Looking at portfolio (no numbers shown)", "Portofoliu look — fără sume."),
+    ("P3", "Quick weather + crypto vibe parallel", "Vremea + paralela cu crypto."),
+    ("P3", "Sunset shot + reflection", "Apus + gând crypto."),
+    ("P3", "Quick chat with neighbor about money", "Discuție cu vecinul despre bani."),
+    ("P3", "Late-night phone scroll reaction", "Scroll noaptea + reacție."),
+    ("P3", "Plan for tomorrow vlog snippet", "Planul de mâine."),
+    ("P3", "Recap of best comment received", "Best comment al zilei recapitulat."),
+    ("P3", "Goodnight thought — gratitude crypto", "Gând de noapte — gratitudine community."),
 ]
 
-# --- P4 trend (30 db = 1/nap) — POV-style = pre-recordable, others not ---
-P4_TOPICS = [
-    ("POV: crypto la masă duminică", "Când cineva îmi explică crypto la masă de duminică.", "Like dacă te-ai văzut", "Igen"),
-    ("Trending sound — portofelul vs prieteni", "Cum arată portofelul meu vs ce zic prietenii că am.", "Tag prietenul", "Nem"),
-    ("Stitch RO finance creator", "Stitch + adăugare constructivă.", "Comment opinia ta", "Nem"),
-    ("Trending sound — «spălat bani» kontra", "Când cineva spune că crypto e doar pentru spălat bani.", "Like", "Nem"),
-    ("Trend hijack aktuális", "Trending sound + crypto twist.", "Like", "Nem"),
-    ("Duet RO creator", "Duet + build on top.", "Comment", "Nem"),
-    ("POV: birou crypto — meeting", "POV: stai în meeting, dar verifici BTC pe sub masă.", "Tag colegul", "Igen"),
-    ("POV: tipuri de prieteni «crypto»", "Tipuri de prieteni când le zici că ești în crypto.", "Tag prietenul", "Igen"),
-    ("Trend dance + crypto caption", "Trending dance, dar caption-ul e crypto reality.", "Like", "Nem"),
-    ("Stitch reply la misinfo", "Stitch + corectează informația greșită.", "Save", "Nem"),
-    ("Duet motivational + crypto realism", "Duet creator motivațional + realism crypto.", "Comment", "Nem"),
-    ("Trending pop-song + crypto lyric flip", "Schimb versurile unei piese trending — varianta crypto.", "Like", "Nem"),
-    ("POV: explici familiei la masă", "POV: explici familiei ce e crypto — ei nu vor să audă.", "Tag pe cineva", "Igen"),
-    ("Highlight reel — top momentele lunii", "Top momentele primei luni pe AURA TikTok.", "Like", "Nem"),
-    ("Trending dance + funny caption", "Trending dance cu caption «crypto winter».", "Like", "Nem"),
-    ("Stitch celebrity statement", "Stitch declarație de celebritate + reality check.", "Comment", "Nem"),
-    ("Duet RO commentary creator", "Duet creator de comentariu RO.", "Like", "Nem"),
-    ("Trending audio — but make it crypto", "Trending audio — dar crypto edition.", "Like", "Nem"),
-    ("POV: prima zi la job vs pe TikTok", "POV: prima zi la job vs prima zi pe TikTok crypto.", "Comment", "Igen"),
-    ("Trending sound — speed-talk", "Speed-talk trending — explic 3 concepte în 15 sec.", "Save", "Nem"),
-    ("Stitch + educational add", "Stitch video viral + valoare educațională.", "Save", "Nem"),
-    ("POV: expert vs începător stil diferit", "POV: cum vorbește un expert vs un începător despre crypto.", "Comment", "Igen"),
-    ("Duet RO comedy creator", "Duet creator de comedie RO.", "Like", "Nem"),
-    ("POV: la grătar, întrebare crypto", "POV: la grătar, cineva întreabă «ce e Bitcoin?».", "Tag prietenul", "Igen"),
-    ("Trending audio reacție", "Trending audio + reacția mea autentică.", "Like", "Nem"),
-    ("Stitch RO meme creator", "Stitch cu meme creator RO.", "Comment", "Nem"),
-    ("Trending challenge participat", "Particip la challenge-ul trending — dar crypto twist.", "Like", "Nem"),
-    ("POV: voice impression boomer", "POV: vorbesc ca tatăl meu boomer despre BTC.", "Like", "Igen"),
-    ("Final month CTA + brand outro", "30 de zile, o lecție mare — și ce urmează.", "Link în bio", "Nem"),
-    ("POV: în metru, semnal slab dar verifici prețul", "POV: în metrou, semnal slab — dar verifici BTC.", "Like", "Igen"),
+# LinkedIn text post topics (30) — quote-of-the-day style + insight
+LI_TXT_TOPICS = [
+    ("P2", "3 lecții din primele 24 ore pe TikTok", "Day 1 building in public — 3 lessons."),
+    ("P2", "De ce românii sunt sceptici cu crypto", "Cultural context + financial trauma post-FNI."),
+    ("P2", "Cum citesc piața în 60 sec", "Framework simplu pentru oameni busy."),
+    ("P2", "1 greșeală pe care nu o repet", "Vulnerability + lesson — primii 5 ani."),
+    ("P2", "Build in public — week 1 numbers", "Followers, views, learnings."),
+    ("P2", "De ce education > prediction", "Pourquoi ne fac TA jóslás pe TikTok."),
+    ("P2", "1 thing nimeni nu îți spune despre wallet-uri", "Hot vs cold + use case real."),
+    ("P2", "ANAF crypto 2026 — quick guide", "10% impozit + ce trebuie să știi."),
+    ("P2", "De ce diaspora are nevoie de stablecoin", "RO diaspora remittance case study."),
+    ("P2", "Cum răspund la «crypto e Ponzi?»", "Răspuns onest în 3 puncte."),
+    ("P2", "Lecția din lansarea TikTok crypto în 2026", "Algo, audience, retention insights."),
+    ("P2", "1 podcast care a schimbat felul în care văd crypto", "Recomandare carte/podcast."),
+    ("P2", "De ce «volume strategy» nu este pentru toată lumea", "Quality vs quantity debate."),
+    ("P2", "Cum măsor success pe TikTok (nu views)", "Save rate, share, follow ratio."),
+    ("P2", "Lessons from a viral moment (or lack thereof)", "Post-mortem onest."),
+    ("P2", "De ce am ales să nu fac «signal posts»", "Etica conținutului crypto."),
+    ("P2", "Romania crypto adoption — surprised me", "Romania surprise stat + cause."),
+    ("P2", "1 thing despre AURA pe care nu îți zice nimeni", "Soft brand insight (no shilling)."),
+    ("P2", "Cum gândesc despre risk în 2026", "Risk frame — macro context."),
+    ("P2", "Half-month wrap — best și worst", "Recap 15 zile creator life."),
+    ("P2", "De ce vorbesc cu părinții mei despre crypto", "Family + finance — bridge story."),
+    ("P2", "Top 3 mistakes I see on Romanian crypto Twitter", "Honest critique constructive."),
+    ("P2", "Cum integrez AI în content workflow", "Behind-the-scenes — Opus Clip, CapCut."),
+    ("P2", "1 framework pentru a evita scam-urile", "Decision framework în 60 sec."),
+    ("P2", "Lessons from week 3", "Recap structural."),
+    ("P2", "De ce TikTok > LinkedIn pentru crypto education", "Platform fit honest take."),
+    ("P2", "Romania regulation pulse check 2026", "Where we are, where we're going."),
+    ("P2", "1 carte care a schimbat mindset-ul meu cu bani", "Book + 3 takeaway-uri."),
+    ("P2", "Final lesson din prima lună creator", "Big lesson — month 1 wrap."),
+    ("P2", "Ce urmează în luna 2 — roadmap public", "Build in public — next 30 days."),
 ]
 
-# --- P6 community / Q&A (30 db = 1/nap) ---
-P6_TOPICS = [
-    ("Q&A sticker — kezdő kérdések (prompt)", "Lăsați-mi întrebări de începător — răspund mâine.", "Întrebați orice", "Igen"),
-    ("Comment coinul tău (prompt)", "Comentează coinul tău — mâine îți zic 1 lucru factual.", "Comment cu coinul", "Igen"),
-    ("Tegnapi Q&A top 3 válasz", "Cele mai bune 3 întrebări de ieri — răspunsuri.", "Alte întrebări?", "Nem"),
-    ("Coin komment válaszok", "Răspund la 5 coinuri din comments.", "Alte coinuri?", "Nem"),
-    ("Live Q&A bejelentés + take 1 komment", "Cea mai bună întrebare a săptămânii — răspuns.", "Alte întrebări?", "Nem"),
-    ("Q&A AURA (prompt) — kérdezzetek bármit", "Întrebați-mă orice despre AURA — răspund mâine.", "Întrebări?", "Igen"),
-    ("AURA Q&A válaszok (őszinte)", "Răspund la 3 întrebări despre AURA — inclusiv ce încă lucrăm.", "Alte întrebări?", "Nem"),
-    ("Community poll — mit a következő 30 napban (prompt)", "M-ați urmărit 30 de zile. Ce vreți să fac în următoarele 30?", "Comment + poll", "Igen"),
-    ("Q&A: mit változtassak a 2. hónapban (prompt)", "Ce vreți să schimb în luna 2? Întrebați.", "Comment", "Igen"),
-    ("Stitch cinikus kommenttel", "Stitch + răspuns respectuos, factual.", "Comment", "Nem"),
-    ("Reagálok a legkedvesebb kommentre", "Reacția mea la cel mai drag comment al săptămânii.", "Like", "Nem"),
-    ("Comment cu wallet color (prompt random)", "Comentează ce culoare are wallet-ul tău — prompt random.", "Comment", "Igen"),
-    ("Tag prietenul paranoid cu securitatea (prompt)", "Tag prietenul cel mai paranoid cu securitatea — vede asta!", "Tag", "Igen"),
-    ("Q&A: cele mai bizare întrebări (reply)", "Cele mai bizare 3 întrebări — și răspunsurile.", "Like", "Nem"),
-    ("Live Q&A — tudnivalók pentru hét", "Live Q&A vineri — ce să pregătiți.", "Set reminder", "Nem"),
-    ("Comment portfolio split anonymous (prompt)", "Comentează split-ul tău de portofoliu — anonim, fără sume.", "Comment", "Igen"),
-    ("Q&A: cele mai mari frici crypto (prompt)", "Care e cea mai mare frică a ta în crypto? Spune-mi.", "Comment", "Igen"),
-    ("Răspuns la cea mai populară comment", "Răspund la comment-ul cu cele mai multe likes.", "Like", "Nem"),
-    ("Poll: ce vrei să-ți explic? (prompt)", "Vot: care 3 subiecte vrei să le acopăr următoarea săptămână?", "Vote", "Igen"),
-    ("Reply video la o întrebare anonimă", "Reply video la o întrebare bună anonimă din DM.", "Comment", "Nem"),
-    ("Community shoutout — top commentator", "Shoutout pentru cel mai bun commentator al săptămânii.", "Tag", "Nem"),
-    ("Q&A: ce coin mă întrebați des? (prompt)", "Care coin mă întrebați cel mai des? Comentează-l.", "Comment", "Igen"),
-    ("AMA wrap — best 3 ale lunii", "Top 3 întrebări AMA ale lunii — cu răspunsuri.", "Save", "Nem"),
-    ("Q&A despre AURA features (reply)", "Răspund la 3 întrebări despre features AURA.", "Comment", "Nem"),
-    ("Tag amicul tău crypto skeptic (prompt)", "Tag amicul tău cel mai skeptic cu crypto.", "Tag", "Igen"),
-    ("Comment «începător» vs «expert» (prompt)", "Te simți începător sau expert? Comentează unul.", "Comment", "Igen"),
-    ("Q&A: care a fost prima cumpărare? (prompt)", "Care a fost prima ta cumpărare crypto? Comentează.", "Comment", "Igen"),
-    ("Reply la «de ce nu ai răspuns?» (apology)", "Reply video — știu, n-am răspuns la X. Iată acum.", "Like", "Nem"),
-    ("Comment greșeala ta crypto (prompt)", "Comentează cea mai mare greșeală a ta în crypto.", "Comment", "Igen"),
-    ("Final community thank you", "Mulțumesc pentru 30 de zile — voi sunteți AURA.", "Like + share", "Igen"),
+# X clip + thread (30) — clip from pillar + 4-tweet thread
+X_CLIP_TOPICS = [
+    ("P2", "Thread: 5 piros zászló crypto", "5 fraze care înseamnă scam. Save."),
+    ("P2", "Thread: BTC vs ETH — 4 differences", "Thread: BTC vs ETH în 4 tweets."),
+    ("P5", "Thread: cum lucrează pig butchering", "Thread: pig butchering scam structure."),
+    ("P2", "Thread: cum citești un chart", "Thread: chart reading 4-step framework."),
+    ("P2", "Thread: ce e blockchain (5 tweets)", "Thread: blockchain explicat 5x."),
+    ("P5", "Thread: Telegram VIP scam steps", "Thread: cum recunoști Telegram VIP scam."),
+    ("P2", "Thread: stablecoin pentru români", "Thread: stablecoin — diaspora use case."),
+    ("P2", "Thread: hot vs cold wallet", "Thread: când folosești care."),
+    ("P5", "Thread: 5 fake AURA red flags", "Thread: cum recunoști AURA fals."),
+    ("P2", "Thread: ANAF crypto 2026", "Thread: cum plătești impozit pe crypto."),
+    ("P2", "Thread: DeFi în 5 tweets", "Thread: DeFi pentru începători."),
+    ("P5", "Thread: rug pull anatomy", "Thread: cum se face un rug pull."),
+    ("P2", "Thread: DCA vs lump sum data", "Thread: DCA vs lump sum în date reale."),
+    ("P2", "Thread: KYC de ce protejează", "Thread: KYC e prietenul tău."),
+    ("P5", "Thread: romance scam + crypto", "Thread: romance scam — pași și apărare."),
+    ("P2", "Thread: gas fees explicate", "Thread: gas fees în 5 tweets."),
+    ("P2", "Thread: NFT real vs hype", "Thread: NFT — ce a fost real."),
+    ("P5", "Thread: recovery scam", "Thread: recovery scam — a doua undă."),
+    ("P2", "Thread: DAO basics", "Thread: DAO în 4 tweets."),
+    ("P5", "Thread: address poisoning", "Thread: address poisoning — clipboard attack."),
+    ("P2", "Thread: EU MiCA pentru români", "Thread: EU MiCA — ce înseamnă 2026."),
+    ("P5", "Thread: fake giveaway", "Thread: «trimite 1 ETH primești 2» NIMIC."),
+    ("P2", "Thread: tokenomics 5 lucruri", "Thread: tokenomics — 5 lucruri să cauți."),
+    ("P5", "Thread: phishing email", "Thread: phishing email — 4 semne."),
+    ("P2", "Thread: position sizing 1%", "Thread: position sizing — regula 1%."),
+    ("P5", "Thread: SIM swap atac", "Thread: SIM swap — cum lucrează."),
+    ("P2", "Thread: 5 puncte safe exchange", "Thread: 5 puncte să verifici un exchange."),
+    ("P5", "Thread: wallet drainer", "Thread: wallet drainer — site fals."),
+    ("P2", "Thread: prima lună recap", "Thread: 30 zile — 5 lecții."),
+    ("P2", "Thread: ce urmează în luna 2", "Thread: roadmap public pentru luna 2."),
 ]
 
 
 def main():
     header = [
-        "#", "Day", "Date", "Weekday", "PostTime",
-        "Pillar", "PreRecord",
-        "Topic", "Hook (RO)", "CTA",
+        "#", "Day", "Date", "Weekday",
+        "Unit", "Time", "Type", "Platforms",
+        "Pillar", "PreRecord", "Topic", "Hook (RO)",
         "Status", "Notes",
     ]
     rows = [header]
-    idx = {p: 0 for p in ["P2", "P3", "P4", "P5", "P6"]}
+    idx_pm = idx_eve = idx_snap_am = idx_snap_pm = idx_li = idx_x = 0
     counter = 0
+
     for offset in range(30):
         d = START + timedelta(days=offset)
         wd = d.weekday()
-        for slot_label, ptime, pillar in SLOTS:
-            counter += 1
-            day_label = f"D{offset+1}"
-            weekday_str = WEEKDAY_HU[wd]
+        day_label = f"D{offset+1}"
+        weekday_str = WEEKDAY_HU[wd]
 
-            if pillar == "P1":
-                if slot_label == "S1":
-                    topic, hook = WEEKDAY_MORNING_NEWS[wd]
-                    cta, pre = "Follow", "Nem"
-                elif slot_label == "S4":
-                    topic, hook = MIDDAY_MARKET
-                    cta, pre = "Follow", "Nem"
-                else:  # S9
-                    topic, hook = EVENING_WRAP
-                    cta, pre = "Save", "Nem"
-            elif pillar == "P2":
-                topic, hook, cta = P2_TOPICS[idx["P2"] % len(P2_TOPICS)]
-                idx["P2"] += 1
-                pre = "Igen"
-            elif pillar == "P3":
-                topic, hook, cta = P3_TOPICS[idx["P3"] % len(P3_TOPICS)]
-                idx["P3"] += 1
-                pre = "Igen"
-            elif pillar == "P4":
-                topic, hook, cta, pre = P4_TOPICS[idx["P4"] % len(P4_TOPICS)]
-                idx["P4"] += 1
-            elif pillar == "P5":
-                topic, hook, cta = P5_TOPICS[idx["P5"] % len(P5_TOPICS)]
-                idx["P5"] += 1
-                pre = "Igen"
-            elif pillar == "P6":
-                topic, hook, cta, pre = P6_TOPICS[idx["P6"] % len(P6_TOPICS)]
-                idx["P6"] += 1
+        for unit_code, ptime, unit_type, platforms, pre in UNITS:
+            counter += 1
+
+            if unit_type == "VID-AM":
+                pillar, topic, hook = VID_AM_BY_WEEKDAY[wd]
+            elif unit_type == "VID-PM":
+                pillar, topic, hook = VID_PM_TOPICS[idx_pm % len(VID_PM_TOPICS)]
+                idx_pm += 1
+            elif unit_type == "VID-EVE":
+                pillar, topic, hook = VID_EVE_TOPICS[idx_eve % len(VID_EVE_TOPICS)]
+                idx_eve += 1
+            elif unit_type == "SNAP-AM":
+                pillar, topic, hook = SNAP_AM_TOPICS[idx_snap_am % len(SNAP_AM_TOPICS)]
+                idx_snap_am += 1
+            elif unit_type == "SNAP-PM":
+                pillar, topic, hook = SNAP_PM_TOPICS[idx_snap_pm % len(SNAP_PM_TOPICS)]
+                idx_snap_pm += 1
+            elif unit_type == "LI-TXT":
+                pillar, topic, hook = LI_TXT_TOPICS[idx_li % len(LI_TXT_TOPICS)]
+                idx_li += 1
+            elif unit_type == "X-CLIP":
+                pillar, topic, hook = X_CLIP_TOPICS[idx_x % len(X_CLIP_TOPICS)]
+                idx_x += 1
 
             rows.append([
                 counter, day_label, d.isoformat(), weekday_str,
-                ptime, pillar, pre,
-                topic, hook, cta,
+                unit_code, ptime, unit_type, platforms,
+                pillar, pre, topic, hook,
                 "Planned", "",
             ])
 
     with open("AURA_RO_TikTok_tracker.csv", "w", newline="", encoding="utf-8") as f:
         csv.writer(f, quoting=csv.QUOTE_MINIMAL).writerows(rows)
-    igen = sum(1 for r in rows[1:] if r[8] == "Igen")
+
+    igen = sum(1 for r in rows[1:] if r[9] == "Igen")
     print(f"Wrote {len(rows)-1} rows. PreRecord=Igen: {igen}, Nem: {len(rows)-1-igen}")
+    print(f"= {(len(rows)-1)//30} units/day × 30 days = {len(rows)-1} content units")
+    print(f"Post instances/day (cross-post expanded): 4+1+1+4+1+1+4 = 16/day = 480 total")
 
 
 if __name__ == "__main__":
