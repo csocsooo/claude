@@ -14,20 +14,6 @@
     rel="stylesheet"
   />
 
-  <!--
-    Three.js import map — pinned to 0.160.0 for stability.
-    The "three/addons/" alias gives us access to postprocessing,
-    OrbitControls, etc., from the same CDN package.
-  -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-      }
-    }
-  </script>
-
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -170,8 +156,13 @@
     <span>scroll</span>
   </div>
 
-  <!-- Main module: Three.js scene + form validation -->
-  <script type="module" src="main.js"></script>
+  <!--
+    Three.js loaded as a local global (UMD) build, then our classic
+    script. No import map / ES modules → opens straight from file://
+    (double-click), no local server needed.
+  -->
+  <script src="three.min.js"></script>
+  <script src="main.js"></script>
 
 </body>
 </html>

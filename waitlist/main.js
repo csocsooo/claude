@@ -10,10 +10,13 @@
  *      animated success state. No network calls.
  */
 
-import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+/*
+ * THREE is loaded as a global from the local UMD build (three.min.js),
+ * so this file runs as a classic script and works straight from file://
+ * (double-click) — no bundler, import map, or local server required.
+ * Postprocessing addons (bloom) are not part of the UMD build, so the
+ * glow is achieved purely via emissive material + tone-mapping exposure.
+ */
 
 /* ================================================================
    Utility: detect WebGL support
@@ -89,7 +92,7 @@ function initScene() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, DPR_CAP));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.toneMapping        = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.25; // slightly higher to compensate for no bloom pass
   renderer.outputColorSpace   = THREE.SRGBColorSpace;
 
   // --- Scene & Camera --------------------------------------------
@@ -177,30 +180,13 @@ function initScene() {
   group.add(mesh);
   scene.add(group);
 
-  // --- Postprocessing: Bloom (desktop only) ---------------------
-  // On mobile/low-power devices the bloom pass is skipped entirely
-  // to avoid GPU overload. We render straight through the renderer
-  // instead of the EffectComposer.
-  let composer = null;
-
-  if (!lowPower) {
-    try {
-      composer = new EffectComposer(renderer);
-      composer.addPass(new RenderPass(scene, camera));
-
-      const bloom = new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        0.55,   // bloom strength
-        0.4,    // bloom radius
-        0.75    // bloom threshold (only bright areas bloom)
-      );
-      composer.addPass(bloom);
-    } catch (err) {
-      // Composer/bloom setup failed — fall back to plain renderer
-      console.warn('[AURA] EffectComposer setup failed, rendering without bloom:', err);
-      composer = null;
-    }
-  }
+  // --- Rendering path -------------------------------------------
+  // The UMD (global) Three.js build does not ship the postprocessing
+  // addons, so there is no EffectComposer/bloom here. The "glow" comes
+  // from the emissive material + raised tone-mapping exposure instead.
+  // `composer` stays null and the render calls below use the plain
+  // renderer — keeping a single, dependency-free rendering path.
+  const composer = null;
 
   // --- Mouse parallax state --------------------------------------
   // We store the "target" mouse position and lerp the actual rotation
@@ -305,7 +291,9 @@ function initScene() {
     mesh.scale.z = baseScale * breathe;
 
     // ------ Emissive pulse (gives a "glow breathing" feel) ------
-    const glow = 0.25 + Math.sin(t * 0.8) * 0.12;
+    // Pushed a bit higher than the original bloom-assisted version so the
+    // object still reads as luminous without a postprocessing glow pass.
+    const glow = 0.5 + Math.sin(t * 0.8) * 0.18;
     material.emissiveIntensity = glow;
 
     // ------ Animate fill light position (slow orbit) ------
