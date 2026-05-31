@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Apex — One workspace. Every workflow.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #0a0e1f;
+    background: #f0f4ff;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mesh {
+    position: fixed;
+    inset: -10vmax;
+    z-index: 0;
+    background:
+      radial-gradient(closest-side at 25% 30%, #c7b9ff 0%, transparent 60%),
+      radial-gradient(closest-side at 75% 70%, #a3c5ff 0%, transparent 55%),
+      radial-gradient(closest-side at 60% 20%, #ffd1f5 0%, transparent 50%),
+      linear-gradient(180deg, #f0f4ff 0%, #e8e1ff 100%);
+    filter: blur(40px) saturate(1.1);
+    animation: meshDrift 40s ease-in-out infinite;
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  @keyframes meshDrift {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(2vmax, -2vmax) rotate(2deg); }
+  }
+
+  nav {
+    position: relative; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 22px 40px;
+  }
+  nav .mark {
+    font-family: 'Inter Tight', sans-serif; font-weight: 700;
+    font-size: 18px; letter-spacing: -0.02em;
+  }
+  nav .mark::before {
+    content: ''; display: inline-block; width: 22px; height: 22px;
+    background: linear-gradient(135deg, #5b6cff, #c7b9ff);
+    border-radius: 6px; vertical-align: -5px; margin-right: 10px;
+  }
+  nav ul { display: flex; gap: 28px; list-style: none; }
+  nav ul a {
+    color: #4a5172; text-decoration: none; font-size: 14px; font-weight: 500;
+    transition: color 150ms ease;
+  }
+  nav ul a:hover { color: #0a0e1f; }
+  nav .cta {
+    padding: 10px 20px; border-radius: 999px;
+    background: rgba(10, 14, 31, 0.9); color: #fff;
+    font-size: 14px; font-weight: 500; text-decoration: none;
+    transition: background 200ms ease;
+  }
+  nav .cta:hover { background: #5b6cff; }
+
+  .hero {
+    position: relative; z-index: 5;
+    padding: 80px 24px 120px;
+    display: grid; place-items: center;
+    text-align: center;
+  }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px 6px 6px; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    font-size: 13px; color: #2b3257;
+    margin-bottom: 28px;
+    opacity: 0; transform: translateY(8px);
+    animation: rise 800ms cubic-bezier(.2,.7,.2,1) 100ms forwards;
+  }
+  .pill .badge {
+    background: #0a0e1f; color: #fff; font-size: 11px;
+    padding: 3px 10px; border-radius: 999px; font-weight: 600;
+  }
+
+  h1 {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 600; letter-spacing: -0.04em;
+    font-size: clamp(56px, 8vw, 128px);
+    line-height: 0.95;
+    max-width: 14ch; margin: 0 auto;
+  }
+  h1 .word {
+    display: inline-block; opacity: 0; transform: translateY(20px);
+    animation: rise 700ms cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  h1 .accent {
+    background: linear-gradient(135deg, #5b6cff, #c83bff 60%, #ff6ba8);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  p.sub {
+    margin: 28px auto 0; max-width: 52ch;
+    color: #4a5172; font-size: 18px; line-height: 1.55;
+    opacity: 0; transform: translateY(8px);
+    animation: rise 800ms cubic-bezier(.2,.7,.2,1) 600ms forwards;
+  }
+
+  .ctas {
+    display: flex; gap: 12px; justify-content: center; margin-top: 36px;
+    opacity: 0; transform: translateY(8px);
+    animation: rise 800ms cubic-bezier(.2,.7,.2,1) 750ms forwards;
+  }
+  .ctas a {
+    text-decoration: none; font-size: 15px; font-weight: 500;
+    padding: 14px 24px; border-radius: 999px;
+    transition: transform 200ms ease, background 200ms ease;
+  }
+  .ctas .primary { background: #0a0e1f; color: #fff; }
+  .ctas .primary:hover { background: #5b6cff; transform: translateY(-1px); }
+  .ctas .ghost {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    color: #0a0e1f;
+  }
+  .ctas .ghost:hover { background: rgba(255, 255, 255, 0.8); }
+
+  .floating {
+    position: relative; max-width: 1100px; margin: 90px auto 0;
+    height: 280px;
+    perspective: 1200px;
+    opacity: 0;
+    animation: rise 1000ms cubic-bezier(.2,.7,.2,1) 900ms forwards;
+  }
+  .glass {
+    position: absolute;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 30px 60px -20px rgba(40, 50, 110, 0.25);
+    padding: 22px;
+    will-change: transform;
+    transition: transform 400ms cubic-bezier(.2,.7,.2,1);
+  }
+  .glass .row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .glass .dot { width: 24px; height: 24px; border-radius: 8px; }
+  .glass .title { font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 14px; }
+  .glass .meta { font-size: 12px; color: #4a5172; margin-top: 2px; }
+  .glass .stat { font-family: 'Inter Tight', sans-serif; font-size: 36px; font-weight: 600; letter-spacing: -0.03em; }
+  .glass .delta { color: #16a34a; font-size: 12px; font-weight: 600; }
+
+  .card-1 { width: 280px; left: 8%; top: 30px; transform: rotate(-6deg); }
+  .card-2 { width: 320px; left: 50%; top: 0; transform: translateX(-50%); }
+  .card-3 { width: 280px; right: 8%; top: 50px; transform: rotate(6deg); }
+
+  .card-1 .dot { background: linear-gradient(135deg, #5b6cff, #a3c5ff); }
+  .card-2 .dot { background: linear-gradient(135deg, #ff6ba8, #c7b9ff); }
+  .card-3 .dot { background: linear-gradient(135deg, #16a34a, #a3e9c1); }
+
+  .logos {
+    margin: 100px auto 0; max-width: 900px; padding: 0 24px;
+    text-align: center; color: #6a7196; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    opacity: 0;
+    animation: rise 800ms cubic-bezier(.2,.7,.2,1) 1100ms forwards;
+  }
+  .logos .row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 22px; gap: 28px; flex-wrap: wrap;
+    font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 22px;
+    color: #2b3257; opacity: 0.6;
+    letter-spacing: -0.02em; text-transform: none;
+  }
+  .logos .row span { transition: opacity 200ms ease; cursor: default; }
+  .logos .row span:hover { opacity: 1; }
+
+  @keyframes rise {
+    to { opacity: 1; transform: translate(0,0); }
+  }
+  .card-2 { animation: none; }
+
+  @media (max-width: 720px) {
+    nav ul { display: none; }
+    .hero { padding: 40px 20px 60px; }
+    .floating { height: 360px; }
+    .card-1, .card-3 { display: none; }
+    .card-2 { width: calc(100% - 40px); left: 20px; right: 20px; transform: none; top: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .pill, h1 .word, p.sub, .ctas, .floating, .logos { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="mesh"></div>
+  <div class="grain"></div>
+
+  <nav>
+    <a href="#" class="mark">Apex</a>
+    <ul>
+      <li><a href="#">Product</a></li>
+      <li><a href="#">Customers</a></li>
+      <li><a href="#">Pricing</a></li>
+      <li><a href="#">Changelog</a></li>
+    </ul>
+    <a href="#" class="cta">Start free</a>
+  </nav>
+
+  <section class="hero">
+    <div class="pill">
+      <span class="badge">New</span>
+      <span>Apex 3.0 — AI-native pipelines</span>
+    </div>
+
+    <h1 id="headline">
+      <span class="word" style="animation-delay: 200ms">One</span>
+      <span class="word" style="animation-delay: 280ms">workspace.</span><br />
+      <span class="word accent" style="animation-delay: 360ms">Every</span>
+      <span class="word accent" style="animation-delay: 440ms">workflow.</span>
+    </h1>
+
+    <p class="sub">
+      Replace eight disconnected SaaS tabs with a single, fast, modern workspace your team will actually open on Monday morning. Free for up to ten teammates.
+    </p>
+
+    <div class="ctas">
+      <a href="#" class="primary">Start free</a>
+      <a href="#" class="ghost">Watch 60s demo →</a>
+    </div>
+
+    <div class="floating" id="floating">
+      <div class="glass card-1">
+        <div class="row">
+          <div class="dot"></div>
+          <div>
+            <div class="title">Pipelines</div>
+            <div class="meta">12 active · 3 paused</div>
+          </div>
+        </div>
+        <div class="stat">+248</div>
+        <div class="delta">↑ 18% this week</div>
+      </div>
+
+      <div class="glass card-2">
+        <div class="row">
+          <div class="dot"></div>
+          <div>
+            <div class="title">Today</div>
+            <div class="meta">Wednesday · 9 tasks</div>
+          </div>
+        </div>
+        <div class="stat">9 / 14</div>
+        <div class="delta">on track</div>
+      </div>
+
+      <div class="glass card-3">
+        <div class="row">
+          <div class="dot"></div>
+          <div>
+            <div class="title">Revenue</div>
+            <div class="meta">MRR · Q2</div>
+          </div>
+        </div>
+        <div class="stat">$48.2k</div>
+        <div class="delta">↑ 9% MoM</div>
+      </div>
+    </div>
+
+    <div class="logos">
+      <div>Trusted by teams at</div>
+      <div class="row">
+        <span>Northwind</span><span>Lumen Co</span><span>Atlas/AI</span>
+        <span>Vector</span><span>Pyra Labs</span><span>Forma</span>
+      </div>
+    </div>
+  </section>
+
+<script>
+  // Mouse-parallax on the floating glass cards.
+  const floating = document.getElementById('floating');
+  const cards = floating.querySelectorAll('.glass');
+  const baseRot = [-6, 0, 6];
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    floating.addEventListener('mousemove', (e) => {
+      const rect = floating.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      cards.forEach((card, i) => {
+        const depth = (i === 1 ? 18 : 10);
+        const rot = baseRot[i];
+        const tx = -x * depth;
+        const ty = -y * depth;
+        const transform = i === 1
+          ? `translateX(calc(-50% + ${tx}px)) translateY(${ty}px)`
+          : `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
+        card.style.transform = transform;
+      });
+    });
+    floating.addEventListener('mouseleave', () => {
+      cards.forEach((card, i) => {
+        card.style.transform = i === 1 ? 'translateX(-50%)' : `rotate(${baseRot[i]}deg)`;
+      });
+    });
+  }
+</script>
+</body>
+</html>
