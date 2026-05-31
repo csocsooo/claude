@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AURA — Join the Waitlist</title>
+  <meta name="description" content="AURA is coming. Be among the first to experience it. Join the waitlist today." />
+
+  <!-- Google Fonts: Space Grotesk (display) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <!--
+    Three.js import map — pinned to 0.160.0 for stability.
+    The "three/addons/" alias gives us access to postprocessing,
+    OrbitControls, etc., from the same CDN package.
+  -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!--
+    Three.js canvas — absolutely positioned behind everything.
+    aria-hidden because it is purely decorative.
+  -->
+  <canvas id="canvas-bg" aria-hidden="true"></canvas>
+
+  <!--
+    WebGL fallback — shown by JS when WebGL is unavailable.
+    Pure CSS radial gradient so the page is never broken/bare.
+  -->
+  <div id="canvas-fallback" aria-hidden="true"></div>
+
+  <!-- =====================================================
+       HERO — the single section of this page
+  ===================================================== -->
+  <section id="hero" aria-label="AURA waitlist hero">
+    <div class="hero-inner">
+
+      <!-- Status badge -->
+      <div class="badge" role="status">
+        <span class="badge-dot" aria-hidden="true"></span>
+        Early access — limited spots available
+      </div>
+
+      <!-- Headline block -->
+      <div class="headline-wrap">
+        <h1 class="headline">
+          The world just<br />
+          <span class="headline-accent">got an upgrade.</span>
+        </h1>
+        <p class="subheadline">
+          AURA reimagines how you move through every moment.
+          Be the first inside when doors open.
+        </p>
+      </div>
+
+      <!-- -----------------------------------------------
+           Glassmorphism form card
+      ----------------------------------------------- -->
+      <div class="form-card" id="form-card" aria-live="polite">
+
+        <!-- Waitlist form -->
+        <form
+          id="waitlist-form"
+          class="form-fields"
+          novalidate
+          aria-label="Waitlist signup"
+        >
+
+          <!-- Field: Full name -->
+          <div class="field-group">
+            <label for="input-name">Full name</label>
+            <input
+              id="input-name"
+              name="name"
+              type="text"
+              placeholder="Jane Smith"
+              autocomplete="name"
+              aria-required="true"
+              aria-describedby="err-name"
+            />
+            <span class="field-error" id="err-name" role="alert"></span>
+          </div>
+
+          <!-- Field: Email -->
+          <div class="field-group">
+            <label for="input-email">Email address</label>
+            <input
+              id="input-email"
+              name="email"
+              type="email"
+              placeholder="jane@example.com"
+              autocomplete="email"
+              aria-required="true"
+              aria-describedby="err-email"
+            />
+            <span class="field-error" id="err-email" role="alert"></span>
+          </div>
+
+          <!-- Field: Phone -->
+          <div class="field-group">
+            <label for="input-phone">Phone number</label>
+            <input
+              id="input-phone"
+              name="phone"
+              type="tel"
+              placeholder="+1 555 000 0000"
+              autocomplete="tel"
+              aria-required="true"
+              aria-describedby="err-phone"
+            />
+            <span class="field-error" id="err-phone" role="alert"></span>
+          </div>
+
+          <!-- Submit CTA -->
+          <button class="btn-cta" type="submit" aria-label="Join the AURA waitlist">
+            <span class="btn-text">Get early access →</span>
+            <span class="btn-spinner" aria-hidden="true"></span>
+          </button>
+
+        </form>
+
+        <!-- Success state — hidden until successful submit -->
+        <div class="success-state" id="success-state" aria-hidden="true">
+          <div class="success-icon" aria-hidden="true">✨</div>
+          <p class="success-title">You're on the list.</p>
+          <p class="success-sub">
+            We'll reach out the moment AURA opens its doors.
+            Keep an eye on your inbox.
+          </p>
+        </div>
+
+      </div>
+      <!-- /form-card -->
+
+      <!-- Social proof -->
+      <div class="social-proof" aria-label="2847 people already joined the waitlist">
+        <div class="proof-avatars" aria-hidden="true">
+          <span title="Member">J</span>
+          <span title="Member">M</span>
+          <span title="Member">A</span>
+          <span title="Member">+</span>
+        </div>
+        <span>
+          <strong>2&thinsp;847</strong> people already waiting
+        </span>
+      </div>
+
+    </div>
+    <!-- /hero-inner -->
+  </section>
+
+  <!-- Subtle scroll nudge (hidden on very short viewports) -->
+  <div class="scroll-hint" aria-hidden="true">
+    <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+    <span>scroll</span>
+  </div>
+
+  <!-- Main module: Three.js scene + form validation -->
+  <script type="module" src="main.js"></script>
+
+</body>
+</html>

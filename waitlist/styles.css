@@ -1,0 +1,691 @@
+/* ================================================================
+   AURA Waitlist — styles.css
+   Design: dark elegance · glassmorphism form · micro-interactions
+   Spacing: 8-point scale  |  Font: Space Grotesk + Inter
+================================================================ */
+
+/* ---------- Google Fonts import ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+/* ----------------------------------------------------------------
+   1. Custom properties
+---------------------------------------------------------------- */
+:root {
+  /* Background */
+  --bg-void:   #060608;
+  --bg-deep:   #0b0b12;
+
+  /* Accent gradient: electric violet → cyan */
+  --accent-a:       #7c3aed;
+  --accent-b:       #06b6d4;
+  --accent-glow:    rgba(124, 58, 237, 0.40);
+  --accent-glow-b:  rgba(6, 182, 212, 0.25);
+
+  /* Text */
+  --text-primary:   #f4f4f8;
+  --text-secondary: #9090aa;
+  --text-muted:     #45455a;
+
+  /* Glass surfaces */
+  --border-glass:   rgba(255, 255, 255, 0.08);
+  --border-focus:   rgba(124, 58, 237, 0.65);
+  --glass-bg:       rgba(255, 255, 255, 0.034);
+
+  /* States */
+  --error:          #ef4444;
+  --success:        #10b981;
+  --success-glow:   rgba(16, 185, 129, 0.28);
+
+  /* Spacing (8-point) */
+  --sp-1:  0.25rem;
+  --sp-2:  0.5rem;
+  --sp-3:  0.75rem;
+  --sp-4:  1rem;
+  --sp-5:  1.25rem;
+  --sp-6:  1.5rem;
+  --sp-8:  2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+
+  /* Typography */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  /* Easing */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ----------------------------------------------------------------
+   2. Reset & base
+---------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* Fine noise texture — adds tactile depth on dark bg */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+/* ----------------------------------------------------------------
+   3. Three.js canvas
+---------------------------------------------------------------- */
+#canvas-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  display: block;
+  /* Subtle vignette — focuses eye on the centre */
+  -webkit-mask-image: radial-gradient(ellipse 92% 88% at 50% 50%, black 50%, transparent 100%);
+          mask-image: radial-gradient(ellipse 92% 88% at 50% 50%, black 50%, transparent 100%);
+}
+
+/* ----------------------------------------------------------------
+   4. WebGL fallback gradient (shown when WebGL is unavailable)
+---------------------------------------------------------------- */
+#canvas-fallback {
+  display: none; /* toggled to block by JS on WebGL failure */
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 30% 40%,
+      rgba(124, 58, 237, 0.22) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 55% at 75% 65%,
+      rgba(6, 182, 212, 0.16) 0%, transparent 60%),
+    linear-gradient(160deg, #0d0d18 0%, #060608 60%, #0a0810 100%);
+}
+
+/* ----------------------------------------------------------------
+   5. Hero layout
+---------------------------------------------------------------- */
+#hero {
+  position: relative;
+  z-index: 2;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-8) var(--sp-4);
+}
+
+.hero-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-10);
+  max-width: 680px;
+  width: 100%;
+  text-align: center;
+}
+
+/* ----------------------------------------------------------------
+   6. Status badge
+---------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-5);
+  background: rgba(124, 58, 237, 0.10);
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: #a78bfa;
+
+  /* Stagger: 1st element */
+  opacity: 0;
+  transform: translateY(14px);
+  animation: fadeUp 0.7s var(--ease-out-expo) 0.10s forwards;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #7c3aed;
+  box-shadow: 0 0 8px 2px rgba(124, 58, 237, 0.70);
+  animation: pulseDot 2.4s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { box-shadow: 0 0 6px 1px rgba(124, 58, 237, 0.55); }
+  50%       { box-shadow: 0 0 14px 4px rgba(124, 58, 237, 0.90); }
+}
+
+/* ----------------------------------------------------------------
+   7. Headline
+---------------------------------------------------------------- */
+.headline-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+
+  /* Stagger: 2nd element */
+  opacity: 0;
+  transform: translateY(14px);
+  animation: fadeUp 0.85s var(--ease-out-expo) 0.26s forwards;
+}
+
+h1.headline {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 7.5vw, 5.2rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.028em;
+  color: var(--text-primary);
+}
+
+/* Gradient text span */
+.headline-accent {
+  background: linear-gradient(95deg, var(--accent-a) 0%, var(--accent-b) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* Prevent clipping on descenders */
+  padding-bottom: 0.06em;
+}
+
+.subheadline {
+  font-family: var(--font-body);
+  font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+  font-weight: 400;
+  line-height: 1.68;
+  color: var(--text-secondary);
+  max-width: 46ch;
+  margin: 0 auto;
+}
+
+/* ----------------------------------------------------------------
+   8. Glassmorphism form card
+---------------------------------------------------------------- */
+.form-card {
+  width: 100%;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  padding: var(--sp-8);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 32px 80px -16px rgba(0, 0, 0, 0.72),
+    0 0 60px -20px var(--accent-glow),
+    0 0 100px -40px var(--accent-glow-b);
+  position: relative;
+  overflow: hidden;
+
+  /* Stagger: 3rd element */
+  opacity: 0;
+  transform: translateY(16px);
+  animation: fadeUp 0.9s var(--ease-out-expo) 0.44s forwards;
+}
+
+/* Top-edge shimmer line */
+.form-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 8%; right: 8%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(124, 58, 237, 0.55) 38%,
+    rgba(6, 182, 212, 0.55) 62%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------
+   9. Form fields
+---------------------------------------------------------------- */
+/* The <form> element itself is .form-fields */
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  text-align: left;
+}
+
+/* Label */
+.field-group label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.field-group:focus-within label {
+  color: #a78bfa;
+}
+
+/* Input */
+.field-group input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 10px;
+  padding: var(--sp-4) var(--sp-5);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  outline: none;
+  width: 100%;
+  transition:
+    border-color 0.25s ease,
+    box-shadow   0.25s ease,
+    background   0.25s ease;
+}
+
+.field-group input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Fix Chrome autofill yellow wash */
+.field-group input:-webkit-autofill,
+.field-group input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #12122a inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  transition: background-color 9999s;
+}
+
+.field-group input:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Focus: violet glow */
+.field-group input:focus {
+  border-color: var(--border-focus);
+  background: rgba(124, 58, 237, 0.06);
+  box-shadow:
+    0 0 0 3px rgba(124, 58, 237, 0.16),
+    0 0 24px -6px rgba(124, 58, 237, 0.18);
+}
+
+/* Validation error state */
+.field-group input.invalid {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+}
+
+/* Inline error message */
+.field-error {
+  font-size: 0.75rem;
+  color: var(--error);
+  min-height: 1em;
+  font-style: italic;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.field-error.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ----------------------------------------------------------------
+   10. CTA button
+---------------------------------------------------------------- */
+.btn-cta {
+  position: relative;
+  width: 100%;
+  padding: var(--sp-4) var(--sp-8);
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+
+  /* Gradient — animates on hover via background-position */
+  background: linear-gradient(
+    105deg,
+    var(--accent-a) 0%,
+    #5b21b6 45%,
+    var(--accent-b) 100%
+  );
+  background-size: 200% 100%;
+  background-position: 100% 0;
+
+  transition:
+    background-position 0.5s ease,
+    box-shadow          0.3s ease,
+    transform           0.15s var(--ease-spring);
+
+  box-shadow:
+    0 4px 28px -6px rgba(124, 58, 237, 0.65),
+    0 1px 0 rgba(255, 255, 255, 0.10) inset;
+}
+
+/* Shimmer sweep */
+.btn-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.13) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  background-position: -100% 0;
+  transition: background-position 0.6s ease;
+  pointer-events: none;
+}
+
+.btn-cta:hover {
+  background-position: 0% 0;
+  box-shadow:
+    0 8px 40px -4px rgba(124, 58, 237, 0.80),
+    0 0 0 1px rgba(124, 58, 237, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.14) inset;
+  transform: translateY(-2px);
+}
+
+.btn-cta:hover::before {
+  background-position: 200% 0;
+}
+
+.btn-cta:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: 0 4px 18px -4px rgba(124, 58, 237, 0.50);
+  transition-duration: 0.08s;
+}
+
+.btn-cta:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+
+.btn-cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Button internal layout */
+.btn-text {
+  display: inline-block;
+  transition: opacity 0.2s ease;
+}
+
+.btn-cta.loading .btn-text { opacity: 0; }
+
+/* Spinner (shown during async submit animation) */
+.btn-spinner {
+  display: none;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.btn-cta.loading .btn-spinner { display: block; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ----------------------------------------------------------------
+   11. Success state (revealed after submit)
+---------------------------------------------------------------- */
+.success-state {
+  display: none;       /* JS switches to flex */
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-6) 0;
+  text-align: center;
+}
+
+/* Icon circle */
+.success-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.10);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  box-shadow: 0 0 28px -6px var(--success-glow);
+
+  /* Animated in via .visible class */
+  transform: scale(0.45);
+  opacity: 0;
+  transition: transform 0.55s var(--ease-spring), opacity 0.4s ease;
+}
+
+.success-title {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease 0.15s, transform 0.5s var(--ease-out-expo) 0.15s;
+}
+
+.success-sub {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  max-width: 36ch;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease 0.27s, transform 0.5s var(--ease-out-expo) 0.27s;
+}
+
+/* Trigger all children at once */
+.success-state.visible .success-icon {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.success-state.visible .success-title,
+.success-state.visible .success-sub {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Show/hide helpers driven by .submitted on .form-card */
+.form-card.submitted .form-fields { display: none; }
+.form-card.submitted .success-state { display: flex; }
+
+/* ----------------------------------------------------------------
+   12. Social proof
+---------------------------------------------------------------- */
+.social-proof {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: 0.80rem;
+  color: var(--text-muted);
+
+  /* Stagger: 4th element */
+  opacity: 0;
+  animation: fadeUp 0.7s var(--ease-out-expo) 0.68s forwards;
+}
+
+.social-proof strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Mini avatar stack */
+.proof-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.proof-avatars span {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-void);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  margin-left: -8px;
+}
+
+.proof-avatars span:first-child { margin-left: 0; }
+
+/* ----------------------------------------------------------------
+   13. Scroll hint
+---------------------------------------------------------------- */
+.scroll-hint {
+  position: fixed;
+  bottom: var(--sp-8);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 0.65rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  pointer-events: none;
+  opacity: 0;
+  animation: fadeIn 1s ease 1.4s forwards;
+}
+
+.scroll-mouse {
+  width: 20px;
+  height: 32px;
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  position: relative;
+}
+
+.scroll-wheel {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  translate: -50% 0;
+  width: 3px;
+  height: 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.28);
+  animation: scrollWheel 1.8s ease infinite;
+}
+
+@keyframes scrollWheel {
+  0%   { top: 5px;  opacity: 1; }
+  80%  { top: 14px; opacity: 0; }
+  100% { top: 5px;  opacity: 0; }
+}
+
+/* ----------------------------------------------------------------
+   14. Entrance animations
+---------------------------------------------------------------- */
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+/* ----------------------------------------------------------------
+   15. Responsive tweaks
+---------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .hero-inner {
+    gap: var(--sp-8);
+  }
+
+  h1.headline {
+    font-size: clamp(2.1rem, 10vw, 2.9rem);
+  }
+
+  .form-card {
+    padding: var(--sp-6) var(--sp-5);
+    border-radius: 16px;
+  }
+
+  .scroll-hint {
+    display: none; /* too cramped on small screens */
+  }
+}
+
+@media (max-width: 380px) {
+  .form-card {
+    padding: var(--sp-5) var(--sp-4);
+  }
+
+  .btn-cta {
+    padding: var(--sp-4) var(--sp-5);
+    font-size: 0.9rem;
+  }
+}
+
+/* ----------------------------------------------------------------
+   16. Reduced motion
+---------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
