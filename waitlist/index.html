@@ -71,7 +71,7 @@
       <!-- -----------------------------------------------
            Glassmorphism form card
       ----------------------------------------------- -->
-      <div class="form-card" id="form-card" aria-live="polite">
+      <div class="form-card" id="form-card">
 
         <!-- Waitlist form -->
         <form
@@ -135,9 +135,9 @@
         </form>
 
         <!-- Success state — hidden until successful submit -->
-        <div class="success-state" id="success-state" aria-hidden="true">
+        <div class="success-state" id="success-state" role="status" aria-live="polite" aria-hidden="true">
           <div class="success-icon" aria-hidden="true">✨</div>
-          <p class="success-title">You're on the list.</p>
+          <p class="success-title" tabindex="-1">You're on the list.</p>
           <p class="success-sub">
             We'll reach out the moment AURA opens its doors.
             Keep an eye on your inbox.

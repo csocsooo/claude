@@ -4,8 +4,8 @@
    Spacing: 8-point scale  |  Font: Space Grotesk + Inter
 ================================================================ */
 
-/* ---------- Google Fonts import ---------- */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+/* Google Fonts are loaded via <link> in the HTML head (with preconnect).
+   The @import here has been removed to avoid a duplicate request. */
 
 /* ----------------------------------------------------------------
    1. Custom properties
@@ -24,7 +24,10 @@
   /* Text */
   --text-primary:   #f4f4f8;
   --text-secondary: #9090aa;
-  --text-muted:     #45455a;
+  /* #7878a0 on #060608 yields ~4.9:1 contrast — passes WCAG AA for normal text */
+  --text-muted:     #7878a0;
+  /* Placeholder may be dimmer (decorative hint, not real content) */
+  --text-placeholder: #45455a;
 
   /* Glass surfaces */
   --border-glass:   rgba(255, 255, 255, 0.08);
@@ -320,7 +323,7 @@ h1.headline {
 }
 
 .field-group input::placeholder {
-  color: var(--text-muted);
+  color: var(--text-placeholder);
 }
 
 /* Fix Chrome autofill yellow wash */

@@ -21,13 +21,25 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 function isWebGLAvailable() {
   try {
     const canvas = document.createElement('canvas');
-    return !!(
-      window.WebGLRenderingContext &&
-      (canvas.getContext('webgl2') || canvas.getContext('webgl'))
-    );
+    const ctx = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (!window.WebGLRenderingContext || !ctx) return false;
+    // Release the temporary context immediately to free GPU resources
+    ctx.getExtension('WEBGL_lose_context')?.loseContext();
+    return true;
   } catch {
     return false;
   }
+}
+
+/* ================================================================
+   Utility: detect low-power / mobile device
+================================================================ */
+function isLowPowerDevice() {
+  // Treat small screens or coarse-pointer devices (touch) as low-power
+  return (
+    window.matchMedia('(max-width: 768px)').matches ||
+    window.matchMedia('(pointer: coarse)').matches
+  );
 }
 
 /* ================================================================
@@ -37,22 +49,44 @@ function initScene() {
   const canvas   = document.getElementById('canvas-bg');
   const fallback = document.getElementById('canvas-fallback');
 
-  // --- WebGL gate ------------------------------------------------
-  if (!isWebGLAvailable()) {
+  // Helper: activate the CSS fallback (WebGL unavailable or failed)
+  function activateFallback() {
     canvas.style.display   = 'none';
     fallback.style.display = 'block';
+  }
+
+  // --- WebGL gate ------------------------------------------------
+  if (!isWebGLAvailable()) {
+    activateFallback();
     return; // bail out gracefully — CSS fallback takes over
   }
 
-  // --- Renderer --------------------------------------------------
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha:     true,    // transparent background so CSS bg shows through
-  });
+  // --- Mobile / low-power detection -----------------------------
+  const lowPower = isLowPowerDevice();
 
-  // Cap pixel ratio at 2 for performance on high-DPI screens
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // DPR cap: 1.5 on mobile, 2 on desktop
+  const DPR_CAP = lowPower ? 1.5 : 2;
+
+  // TorusKnot segment counts: fewer on mobile for lower GPU load
+  const TORUS_TUBE_SEGS   = lowPower ? 120 : 220;
+  const TORUS_RADIAL_SEGS = lowPower ? 16  : 24;
+
+  // --- Renderer (try/catch: driver blocklist, context failures) --
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha:     true,    // transparent background so CSS bg shows through
+    });
+  } catch (err) {
+    // Context creation failed (e.g. driver blocklist, hardware limit)
+    console.warn('[AURA] WebGLRenderer creation failed, using CSS fallback:', err);
+    activateFallback();
+    return;
+  }
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, DPR_CAP));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.toneMapping        = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
@@ -90,14 +124,15 @@ function initScene() {
 
   // --- Geometry --------------------------------------------------
   // TorusKnot: complex, self-intersecting loops look great with
-  // iridescent / transmission material
+  // iridescent / transmission material.
+  // Segment counts are reduced on mobile to lower GPU load.
   const geometry = new THREE.TorusKnotGeometry(
-    1.3,   // radius
-    0.42,  // tube radius
-    220,   // tubular segments (higher = smoother)
-    24,    // radial segments
-    2,     // p — winding number
-    3      // q — winding number
+    1.3,               // radius
+    0.42,              // tube radius
+    TORUS_TUBE_SEGS,   // tubular segments (higher = smoother)
+    TORUS_RADIAL_SEGS, // radial segments
+    2,                 // p — winding number
+    3                  // q — winding number
   );
 
   // --- Material: MeshPhysicalMaterial ----------------------------
@@ -132,28 +167,47 @@ function initScene() {
   });
 
   const mesh = new THREE.Mesh(geometry, material);
-  scene.add(mesh);
 
-  // --- Postprocessing: Bloom -------------------------------------
-  // Bloom makes the glowing edges "breathe" without needing a
-  // second render pass per se — it's efficient via EffectComposer.
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
+  // --- Parallax group -------------------------------------------
+  // The mesh lives inside a parent Group. The Group carries parallax
+  // rotation (lerped toward the cursor), while the mesh itself carries
+  // the intrinsic spin/wobble. This keeps parallax as a clean offset
+  // and prevents Y-axis rotation from accumulating as a velocity bias.
+  const group = new THREE.Group();
+  group.add(mesh);
+  scene.add(group);
 
-  const bloom = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.55,   // bloom strength
-    0.4,    // bloom radius
-    0.75    // bloom threshold (only bright areas bloom)
-  );
-  composer.addPass(bloom);
+  // --- Postprocessing: Bloom (desktop only) ---------------------
+  // On mobile/low-power devices the bloom pass is skipped entirely
+  // to avoid GPU overload. We render straight through the renderer
+  // instead of the EffectComposer.
+  let composer = null;
+
+  if (!lowPower) {
+    try {
+      composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+
+      const bloom = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.55,   // bloom strength
+        0.4,    // bloom radius
+        0.75    // bloom threshold (only bright areas bloom)
+      );
+      composer.addPass(bloom);
+    } catch (err) {
+      // Composer/bloom setup failed — fall back to plain renderer
+      console.warn('[AURA] EffectComposer setup failed, rendering without bloom:', err);
+      composer = null;
+    }
+  }
 
   // --- Mouse parallax state --------------------------------------
   // We store the "target" mouse position and lerp the actual rotation
   // toward it each frame — this gives a buttery smooth follow.
   const mouse = { x: 0, y: 0 };      // normalised −1 … +1
-  const target = { rx: 0, ry: 0 };   // target rotation in radians
-  const current = { rx: 0, ry: 0 };  // current (lerped) rotation
+  const target = { rx: 0, ry: 0 };   // target GROUP rotation in radians
+  const current = { rx: 0, ry: 0 };  // current (lerped) GROUP rotation
 
   // Parallax sensitivity (radians of rotation per unit of cursor movement)
   const PARALLAX_STRENGTH = 0.35;
@@ -167,30 +221,52 @@ function initScene() {
 
   // Touch support for parallax
   window.addEventListener('touchmove', (e) => {
-    const t = e.touches[0];
-    mouse.x = (t.clientX / window.innerWidth)  * 2 - 1;
-    mouse.y = (t.clientY / window.innerHeight) * 2 - 1;
+    const touch = e.touches[0];
+    mouse.x = (touch.clientX / window.innerWidth)  * 2 - 1;
+    mouse.y = (touch.clientY / window.innerHeight) * 2 - 1;
     target.ry =  mouse.x * PARALLAX_STRENGTH;
     target.rx = -mouse.y * PARALLAX_STRENGTH * 0.6;
   }, { passive: true });
 
   // --- Resize handler -------------------------------------------
+  // baseScale is stored separately so the breathing animation can
+  // multiply against it reliably without reading back from mesh.scale.
+  let baseScale = 1;
+
   function onResize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
-    composer.setSize(w, h);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, DPR_CAP));
+    if (composer) composer.setSize(w, h);
 
     // Scale mesh down on small screens so it doesn't overpower the UI
-    const scale = Math.min(1, Math.max(0.55, w / 900));
-    mesh.scale.setScalar(scale);
+    baseScale = Math.min(1, Math.max(0.55, w / 900));
+    mesh.scale.setScalar(baseScale);
   }
 
   window.addEventListener('resize', onResize);
   onResize(); // run once on init to set correct scale
+
+  // --- prefers-reduced-motion check -----------------------------
+  // If the user has requested reduced motion, render a single static
+  // frame and stop — no continuous animation loop.
+  const prefersReducedMotion =
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (prefersReducedMotion) {
+    // Position the mesh at a pleasing static angle and render once
+    mesh.rotation.x = 0.18;
+    mesh.rotation.y = 0.4;
+    if (composer) {
+      composer.render();
+    } else {
+      renderer.render(scene, camera);
+    }
+    return; // do not start the animation loop
+  }
 
   // --- Animation loop -------------------------------------------
   const LERP = 0.045; // lower = lazier follow (0 = frozen, 1 = instant)
@@ -204,28 +280,29 @@ function initScene() {
     const delta = clock.getDelta();
     t += delta;
 
-    // ------ Intrinsic rotation (slow, continuous) ------
-    // Y-axis spin + gentle X wobble give the object a "breathing" quality
+    // ------ Intrinsic rotation on the mesh (spin + wobble) ------
+    // Y-axis spin accumulates each frame; X and Z are sinusoidal so
+    // they never drift — purely oscillatory wobble.
     mesh.rotation.y += delta * 0.22;
     mesh.rotation.x  = Math.sin(t * 0.35) * 0.18;
     mesh.rotation.z  = Math.cos(t * 0.25) * 0.08;
 
-    // ------ Parallax: lerp current rotation toward target ------
+    // ------ Parallax on the GROUP (lerped toward cursor) --------
+    // Applying parallax to the parent group keeps it decoupled from
+    // the mesh's intrinsic spin, so it acts as a stable angular offset
+    // rather than a per-frame velocity bias.
     current.rx += (target.rx - current.rx) * LERP;
     current.ry += (target.ry - current.ry) * LERP;
+    group.rotation.x = current.rx;
+    group.rotation.y = current.ry;
 
-    // Apply parallax on top of intrinsic rotation
-    mesh.rotation.x += current.rx;
-    mesh.rotation.y += current.ry;
-
-    // ------ Subtle morphing via displacement of scale ------
-    // Breathing scale pulse: ±3 % over ~4 s
+    // ------ Breathing scale pulse: ±3 % over ~4 s ---------------
+    // All three axes scale uniformly so the object swells/shrinks
+    // evenly. baseScale is the value set by the resize handler.
     const breathe = 1 + Math.sin(t * 1.57) * 0.03;
-    const baseScale = mesh.scale.x; // set by resize handler
-    // We can't simply multiply because resize already set it;
-    // instead we modulate the Y axis only for a subtle "squeeze"
+    mesh.scale.x = baseScale * breathe;
     mesh.scale.y = baseScale * breathe;
-    mesh.scale.z = baseScale * (1 + Math.cos(t * 1.2) * 0.025);
+    mesh.scale.z = baseScale * breathe;
 
     // ------ Emissive pulse (gives a "glow breathing" feel) ------
     const glow = 0.25 + Math.sin(t * 0.8) * 0.12;
@@ -235,8 +312,12 @@ function initScene() {
     fillLight.position.x = Math.sin(t * 0.5) * 4;
     fillLight.position.z = Math.cos(t * 0.5) * 3;
 
-    // Render via composer (includes bloom pass)
-    composer.render();
+    // Render: via composer (bloom) on desktop, plain renderer on mobile
+    if (composer) {
+      composer.render();
+    } else {
+      renderer.render(scene, camera);
+    }
   }
 
   animate();
@@ -314,13 +395,16 @@ function initForm() {
   function validatePhone(showFeedback = false) {
     const errEl = document.getElementById('err-phone');
     const val   = phoneInput.value.trim();
-    // Accepts: optional +, digits, spaces, dashes, dots, parens; min 7 digits
-    const phoneRe = /^[+\-()\s\d.]{7,20}$/;
+    // Allowed characters: digits, spaces, +, -, (, ), dots; total length 7–20.
+    // Additionally requires at least 7 actual digits so that a string of
+    // only formatting characters (e.g. "   +()-   ") cannot pass.
+    const phoneRe  = /^[+\-()\s\d.]{7,20}$/;
+    const digitMin = 7;
     if (!val) {
       if (showFeedback) showError(phoneInput, errEl, 'Please enter your phone number.');
       return false;
     }
-    if (!phoneRe.test(val)) {
+    if (!phoneRe.test(val) || val.replace(/\D/g, '').length < digitMin) {
       if (showFeedback) showError(phoneInput, errEl, 'Please enter a valid phone number.');
       return false;
     }
@@ -371,6 +455,10 @@ function initForm() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         successEl.classList.add('visible');
+
+        // Move focus to the success title so screen readers announce it
+        const successTitle = successEl.querySelector('.success-title');
+        if (successTitle) successTitle.focus();
       });
     });
   });
