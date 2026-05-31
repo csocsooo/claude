@@ -60,6 +60,22 @@ mély, tetszőleges topológiájú agent-hálózatot szeretnél (agentek, akik e
 delegálnak), arra a **Claude Agent SDK** (Python/TypeScript) a megfelelő eszköz,
 ahol programból írod meg a vezérlési logikát.
 
+## Globális telepítés (minden projektben)
+
+Ha minden projektedben szeretnéd elérni az agenteket, másold őket a
+felhasználó-szintű mappába (`~/.claude/agents/`). A repó gyökeréből:
+
+```bash
+bash .claude/agents/install.sh
+```
+
+A script átmásolja az `orchestrator`, `kutato`, `fejleszto`, `tesztelo` és
+`kodellenor` agenteket a `~/.claude/agents/` alá. Ezután bármelyik projektben
+elérhetők lesznek; ellenőrzés a Claude Code-ban a `/agents` paranccsal.
+
+> Megjegyzés: névütközésnél a projekt-szintű (`.claude/agents/`) felülírja a
+> felhasználó-szintűt — így egy adott repó saját változatot adhat egy agentnek.
+
 ## Testreszabás
 
 - Új agent: hozz létre egy `.md` fájlt itt, a fenti frontmatter-mintával
