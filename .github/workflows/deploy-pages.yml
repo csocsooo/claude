@@ -1,0 +1,48 @@
+name: Deploy waitlist to GitHub Pages
+
+# Publishes the waitlist/ folder as the site root.
+# Runs on pushes to main (and can be triggered manually).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "waitlist/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+# Permissions required by the official Pages deploy actions.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent Pages deployment.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        # enablement: true turns on GitHub Pages for the repo automatically
+        # if it isn't enabled yet (no manual Settings step needed).
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload waitlist as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./waitlist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
