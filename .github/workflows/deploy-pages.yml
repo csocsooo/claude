@@ -5,9 +5,6 @@ name: Deploy waitlist to GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - "waitlist/**"
-      - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
 # Permissions required by the official Pages deploy actions.
@@ -32,11 +29,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure Pages
-        # enablement: true turns on GitHub Pages for the repo automatically
-        # if it isn't enabled yet (no manual Settings step needed).
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload waitlist as Pages artifact
         uses: actions/upload-pages-artifact@v3
