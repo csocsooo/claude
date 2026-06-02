@@ -24,7 +24,14 @@ def main():
         help="Melyik lépés után álljon le (debughoz hasznos)",
     )
     parser.add_argument("--voice", help=f"TTS hang (alap: {config.voice_name})")
+    parser.add_argument("--rate", help="Beszédtempó, pl. +8%% (gyorsabb), -10%%")
+    parser.add_argument("--pitch", help="Hangmagasság, pl. +5Hz, -10Hz")
     parser.add_argument("--aspect", choices=["9:16", "16:9"], help="Képarány")
+    parser.add_argument(
+        "--source",
+        choices=["comfyui", "pexels", "none"],
+        help="Vizuál forrása: comfyui (helyi GPU), pexels (stock), none (gradiens háttér)",
+    )
     parser.add_argument(
         "--script",
         help="Kész narráció szövege vagy egy .txt fájl útja (LLM kihagyva)",
@@ -37,8 +44,14 @@ def main():
 
     if args.voice:
         config.voice_name = args.voice
+    if args.rate:
+        config.voice_rate = args.rate
+    if args.pitch:
+        config.voice_pitch = args.pitch
     if args.aspect:
         config.aspect = args.aspect
+    if args.source:
+        config.video_source = args.source
 
     # A --script lehet maga a szöveg, vagy egy .txt fájl útja.
     script = args.script

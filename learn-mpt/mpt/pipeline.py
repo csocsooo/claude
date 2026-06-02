@@ -10,7 +10,7 @@ külön-külön tesztelhető a script / hang / felirat / klipek / kész videó.
 import os
 from dataclasses import dataclass
 
-from . import llm, material, render, subtitle, tts
+from . import comfyui, llm, material, render, subtitle, tts
 from .config import config
 
 # A lépések sorrendje – a `stop_at` ezek egyikére állítható.
@@ -66,36 +66,57 @@ def run(
     if stop_at == "script":
         return res
 
-    # 2. Kulcsszavak (megadott vagy LLM)
+    # 2. Kulcsszavak (csak ha kell vizuál-kereséshez)
     if terms:
         print("## 2/6  megadott kulcsszavak használata (LLM kihagyva)")
         res.terms = terms
+    elif config.video_source == "none":
+        print("## 2/6  gradiens háttér – kulcsszavak nem kellenek")
+        res.terms = []
     else:
         print("## 2/6  kulcsszavak generálása")
         res.terms = llm.generate_terms(subject, res.script)
     if stop_at == "terms":
         return res
 
-    # 3. Hang (TTS)
+    # 3. Hang (TTS) – a szó-időbélyegeket is visszakapjuk a pontos felirathoz
     print("## 3/6  hang (TTS) generálása")
-    res.audio_file = tts.synthesize(res.script, os.path.join(out_dir, "audio.mp3"))
+    res.audio_file = os.path.join(out_dir, "audio.mp3")
+    word_cues = tts.synthesize(res.script, res.audio_file)
     res.audio_duration = _audio_duration(res.audio_file)
     if stop_at == "audio":
         return res
 
-    # 4. Felirat (Whisper)
-    print("## 4/6  felirat generálása")
-    res.subtitle_file = subtitle.create(
-        res.audio_file, os.path.join(out_dir, "subtitle.srt")
-    )
+    # 4. Felirat – a TTS szó-időbélyegeiből (pontos); Whisper csak fallback
+    res.subtitle_file = os.path.join(out_dir, "subtitle.srt")
+    if word_cues:
+        print("## 4/6  felirat a TTS szó-időbélyegeiből (pontos)")
+        subtitle.from_word_cues(word_cues, res.subtitle_file)
+    else:
+        print("## 4/6  felirat Whisperrel (fallback)")
+        subtitle.create(res.audio_file, res.subtitle_file)
     if stop_at == "subtitle":
         return res
 
-    # 5. Stock klipek letöltése
-    print("## 5/6  stock klipek letöltése")
-    res.clips = material.download_videos(
-        res.terms, os.path.join(out_dir, "clips"), res.audio_duration
-    )
+    # 5. Vizuál beszerzése a választott forrásból
+    clips_dir = os.path.join(out_dir, "clips")
+    if config.video_source == "comfyui":
+        print("## 5/6  vizuál generálása helyi ComfyUI-jal")
+        if comfyui.is_available():
+            res.clips = comfyui.generate(res.terms, clips_dir)
+        else:
+            print(
+                f"⚠️  A ComfyUI nem elérhető ({config.comfyui_url}). "
+                "Indítsd el a saját gépeden, vagy válassz --source pexels/none-t. "
+                "Most gradiens háttérre váltok."
+            )
+            res.clips = []
+    elif config.video_source == "pexels":
+        print("## 5/6  stock klipek letöltése (Pexels)")
+        res.clips = material.download_videos(res.terms, clips_dir, res.audio_duration)
+    else:  # "none"
+        print("## 5/6  vizuál kihagyva – gradiens háttér lesz")
+        res.clips = []
     if stop_at == "materials":
         return res
 

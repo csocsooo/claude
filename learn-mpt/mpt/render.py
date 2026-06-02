@@ -12,34 +12,19 @@ hozzá), ezért defenzíven kezeljük – ha nincs használható font, a videó 
 nélkül, de hibátlanul elkészül (a .srt fájl külön akkor is megvan).
 """
 
-import glob
+import itertools
 import os
 
 from moviepy import (
     AudioFileClip,
-    ColorClip,
     CompositeVideoClip,
     TextClip,
     VideoFileClip,
     concatenate_videoclips,
 )
 
+from . import comfyui, visuals
 from .config import config
-
-# Néhány gyakori betűtípus-hely Linuxon – az elsőt használjuk, amit megtalálunk.
-_FONT_CANDIDATES = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-]
-
-
-def _find_font() -> str | None:
-    for path in _FONT_CANDIDATES:
-        if os.path.exists(path):
-            return path
-    hits = glob.glob("/usr/share/fonts/**/*.ttf", recursive=True)
-    return hits[0] if hits else None
 
 
 def _fit_to_aspect(clip: VideoFileClip):
@@ -75,9 +60,18 @@ def _parse_srt(path: str) -> list[tuple[float, float, str]]:
     return items
 
 
+def _media_to_clip(path: str, max_duration: float):
+    """Egy médiafájlból (ComfyUI kép vagy videó) a célarányra igazított klip."""
+    if comfyui.is_image(path):
+        # Állókép → Ken Burns mozgás, hogy ne legyen statikus.
+        return visuals.image_to_clip(path, duration=max_duration)
+    raw = VideoFileClip(path)
+    return _fit_to_aspect(raw).subclipped(0, min(max_duration, raw.duration))
+
+
 def _burn_subtitles(video, subtitle_path: str):
     """Ráégeti a feliratot. Ha nincs használható betűtípus, az eredetit adja vissza."""
-    font = _find_font()
+    font = visuals.find_font()
     if not font:
         print("⚠️  Nincs használható betűtípus – a videó felirat nélkül készül.")
         return video
@@ -114,14 +108,15 @@ def render(
     audio = AudioFileClip(audio_file)
     target_duration = audio.duration
 
-    # 1-2. Klipek igazítása + darabolás, amíg ki nem töltik a hang hosszát.
+    # 1-2. Klipek (ComfyUI kép/videó vagy stock) igazítása + darabolás, amíg ki
+    #       nem töltik a hang hosszát.
     segments = []
     total = 0.0
-    for path in clip_paths:
-        if total >= target_duration:
+    # Ha kevés a klip, ciklikusan ismételjük, amíg ki nem töltik a hang hosszát.
+    for path in itertools.cycle(clip_paths) if clip_paths else []:
+        if total >= target_duration or len(segments) > 300:
             break
-        raw = VideoFileClip(path)
-        piece = _fit_to_aspect(raw).subclipped(0, min(config.max_clip_seconds, raw.duration))
+        piece = _media_to_clip(path, config.max_clip_seconds)
         segments.append(piece)
         total += piece.duration
 
@@ -130,12 +125,10 @@ def render(
             0, target_duration
         )
     else:
-        # Fallback: nincs stock klip (pl. nincs Pexels-kulcs) → egyszínű háttér,
-        # hogy a feliratos, hangos videó akkor is elkészüljön.
-        print("⚠️  Nincs videóklip – egyszínű háttéren renderelek.")
-        video = ColorClip(
-            size=config.resolution(), color=(15, 23, 42), duration=target_duration
-        )
+        # Fallback: nincs vizuál (nincs ComfyUI/kulcs) → gradiens háttér, hogy a
+        # feliratos, hangos videó akkor is elkészüljön.
+        print("⚠️  Nincs videóklip – gradiens háttéren renderelek.")
+        video = visuals.gradient_background(target_duration)
 
     # 3. Hang rá, a videó pontosan a hang hosszára.
     video = video.with_audio(audio)
