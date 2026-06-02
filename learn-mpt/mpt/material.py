@@ -55,6 +55,13 @@ def download_videos(terms: list[str], out_dir: str, audio_duration: float) -> li
     A klipekből később max `config.max_clip_seconds` használunk fejenként, ezért
     durván ennyi klip kell: hang_hossz / max_clip_seconds (+1 ráhagyás).
     """
+    if not config.pexels_api_key:
+        print(
+            "⚠️  Nincs PEXELS_API_KEY – stock klipek nélkül folytatom "
+            "(a render egyszínű háttérre vált)."
+        )
+        return []
+
     os.makedirs(out_dir, exist_ok=True)
     needed = int(audio_duration / config.max_clip_seconds) + 1
 

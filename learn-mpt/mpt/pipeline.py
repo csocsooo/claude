@@ -36,23 +36,43 @@ def _audio_duration(path: str) -> float:
         return a.duration
 
 
-def run(subject: str, out_dir: str, stop_at: str = "video") -> Result:
-    """Végigfuttatja a futószalagot a `subject` témára, `stop_at`-ig."""
+def run(
+    subject: str,
+    out_dir: str,
+    stop_at: str = "video",
+    script: str | None = None,
+    terms: list[str] | None = None,
+) -> Result:
+    """Végigfuttatja a futószalagot a `subject` témára, `stop_at`-ig.
+
+    `script`: ha megadod, ezt a kész szöveget használja az LLM helyett (pl. élő
+        adatból összerakott narráció). Ilyenkor az 1. lépés kimarad.
+    `terms`: ha megadod, ezeket a kulcsszavakat használja a stock kereséshez az
+        LLM helyett. Ilyenkor a 2. lépés kimarad (LLM kulcs sem kell hozzá).
+    """
     if stop_at not in STEPS:
         raise ValueError(f"stop_at értéke {STEPS} egyike legyen, kaptam: {stop_at!r}")
 
     os.makedirs(out_dir, exist_ok=True)
     res = Result()
 
-    # 1. Script
-    print("## 1/6  script generálása")
-    res.script = llm.generate_script(subject, config.paragraph_number)
+    # 1. Script (kész szöveg vagy LLM)
+    if script:
+        print("## 1/6  kész szkript használata (LLM kihagyva)")
+        res.script = script.strip()
+    else:
+        print("## 1/6  script generálása")
+        res.script = llm.generate_script(subject, config.paragraph_number)
     if stop_at == "script":
         return res
 
-    # 2. Kulcsszavak (stock kereséshez)
-    print("## 2/6  kulcsszavak generálása")
-    res.terms = llm.generate_terms(subject, res.script)
+    # 2. Kulcsszavak (megadott vagy LLM)
+    if terms:
+        print("## 2/6  megadott kulcsszavak használata (LLM kihagyva)")
+        res.terms = terms
+    else:
+        print("## 2/6  kulcsszavak generálása")
+        res.terms = llm.generate_terms(subject, res.script)
     if stop_at == "terms":
         return res
 

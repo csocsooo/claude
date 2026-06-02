@@ -7,6 +7,7 @@ Példák:
 """
 
 import argparse
+import os
 
 from mpt.config import config
 from mpt.pipeline import STEPS, run
@@ -24,6 +25,14 @@ def main():
     )
     parser.add_argument("--voice", help=f"TTS hang (alap: {config.voice_name})")
     parser.add_argument("--aspect", choices=["9:16", "16:9"], help="Képarány")
+    parser.add_argument(
+        "--script",
+        help="Kész narráció szövege vagy egy .txt fájl útja (LLM kihagyva)",
+    )
+    parser.add_argument(
+        "--terms",
+        help="Stock-kereső kulcsszavak vesszővel (LLM kihagyva), pl. 'bitcoin,trading'",
+    )
     args = parser.parse_args()
 
     if args.voice:
@@ -31,7 +40,16 @@ def main():
     if args.aspect:
         config.aspect = args.aspect
 
-    result = run(args.subject, out_dir=args.out, stop_at=args.stop_at)
+    # A --script lehet maga a szöveg, vagy egy .txt fájl útja.
+    script = args.script
+    if script and os.path.isfile(script):
+        script = open(script, encoding="utf-8").read()
+
+    terms = [t.strip() for t in args.terms.split(",") if t.strip()] if args.terms else None
+
+    result = run(
+        args.subject, out_dir=args.out, stop_at=args.stop_at, script=script, terms=terms
+    )
 
     print("\n--- Eredmény ---")
     if result.script:

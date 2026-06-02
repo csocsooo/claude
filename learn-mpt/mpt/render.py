@@ -17,6 +17,7 @@ import os
 
 from moviepy import (
     AudioFileClip,
+    ColorClip,
     CompositeVideoClip,
     TextClip,
     VideoFileClip,
@@ -124,10 +125,17 @@ def render(
         segments.append(piece)
         total += piece.duration
 
-    if not segments:
-        raise RuntimeError("Nincs egyetlen használható videóklip sem.")
-
-    video = concatenate_videoclips(segments, method="compose").subclipped(0, target_duration)
+    if segments:
+        video = concatenate_videoclips(segments, method="compose").subclipped(
+            0, target_duration
+        )
+    else:
+        # Fallback: nincs stock klip (pl. nincs Pexels-kulcs) → egyszínű háttér,
+        # hogy a feliratos, hangos videó akkor is elkészüljön.
+        print("⚠️  Nincs videóklip – egyszínű háttéren renderelek.")
+        video = ColorClip(
+            size=config.resolution(), color=(15, 23, 42), duration=target_duration
+        )
 
     # 3. Hang rá, a videó pontosan a hang hosszára.
     video = video.with_audio(audio)
